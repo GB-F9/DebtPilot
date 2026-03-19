@@ -1,0 +1,505 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, user-scalable=no, maximum-scale=1">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="DebtPilot">
+<meta name="theme-color" content="#0A0A0F">
+<title>DebtPilot</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+html,body{background:#0A0A0F;overflow-x:hidden;font-family:'SF Pro Display',-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;color:#F0F0F5;-webkit-font-smoothing:antialiased}
+input::placeholder,textarea::placeholder{color:rgba(255,255,255,0.2)}
+::-webkit-scrollbar{display:none}
+input[type=number]::-webkit-inner-spin-button,input[type=number]::-webkit-outer-spin-button{-webkit-appearance:none}
+input[type=number]{-moz-appearance:textfield}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.5}}
+@keyframes fadeIn{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:translateY(0)}}
+.fade-in{animation:fadeIn .4s ease-out both}
+.glass{background:rgba(255,255,255,.04);-webkit-backdrop-filter:blur(20px);backdrop-filter:blur(20px);border:1px solid rgba(255,255,255,.06);border-radius:20px}
+.press{transition:transform .15s}
+.press:active{transform:scale(.97)!important}
+.input-field{width:100%;padding:14px 16px;border-radius:14px;border:1px solid rgba(255,255,255,.08);background:rgba(255,255,255,.04);color:#F0F0F5;font-size:15px;font-weight:500;outline:none;font-family:inherit;transition:border-color .2s}
+.input-field:focus{border-color:rgba(0,210,211,.4)}
+.label{font-size:12px;font-weight:700;color:rgba(255,255,255,.45);letter-spacing:1px;text-transform:uppercase;margin-bottom:6px;display:block}
+.modal-overlay{position:fixed;inset:0;z-index:200;display:flex;flex-direction:column;justify-content:flex-end;background:rgba(0,0,0,.6);-webkit-backdrop-filter:blur(8px);backdrop-filter:blur(8px)}
+.modal-sheet{background:#141420;border-radius:28px 28px 0 0;max-height:92vh;overflow:auto;padding:24px 20px calc(env(safe-area-inset-bottom,20px) + 20px);-webkit-overflow-scrolling:touch}
+.cat-btn{padding:8px 14px;border-radius:12px;font-size:13px;font-weight:600;cursor:pointer;display:flex;gap:6px;align-items:center;transition:all .2s;border:1.5px solid rgba(255,255,255,.08);background:rgba(255,255,255,.03);color:rgba(255,255,255,.5)}
+.cat-btn.active{background:var(--cat-bg);border-color:var(--cat-color);color:var(--cat-color)}
+.filter-btn{padding:8px 16px;border-radius:20px;font-size:13px;font-weight:600;cursor:pointer;white-space:nowrap;flex-shrink:0;border:1.5px solid rgba(255,255,255,.08);background:transparent;color:rgba(255,255,255,.4);transition:all .2s}
+.filter-btn.active{border-color:var(--f-color,#00D2D3);background:var(--f-bg,rgba(0,210,211,.1));color:var(--f-color,#00D2D3)}
+.data-btn{width:100%;padding:16px 20px;border-radius:16px;border:1px solid rgba(255,255,255,.06);background:rgba(255,255,255,.04);color:#F0F0F5;font-size:15px;font-weight:600;cursor:pointer;display:flex;justify-content:space-between;align-items:center;font-family:inherit;text-align:left}
+.currency-btn{padding:10px 16px;border-radius:12px;font-size:14px;font-weight:600;cursor:pointer;border:1.5px solid rgba(255,255,255,.08);background:rgba(255,255,255,.03);color:rgba(255,255,255,.4);transition:all .2s}
+.currency-btn.active{border-color:#00D2D3;background:rgba(0,210,211,.1);color:#00D2D3}
+</style>
+</head>
+<body>
+<div id="root"></div>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/react/18.2.0/umd/react.production.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.2.0/umd/react-dom.production.min.js"></script>
+<script>
+const h=React.createElement,{useState,useEffect,useCallback,useRef}=React;
+
+// ═══ CONSTANTS ═══
+const CATEGORIES=[
+{id:"credit_card",label:"Credit Card",icon:"💳",color:"#FF6B6B"},
+{id:"personal_loan",label:"Personal Loan",icon:"🏦",color:"#4ECDC4"},
+{id:"installment",label:"Installment",icon:"📦",color:"#45B7D1"},
+{id:"mortgage",label:"Mortgage",icon:"🏠",color:"#96CEB4"},
+{id:"auto_loan",label:"Auto Loan",icon:"🚗",color:"#FFEAA7"},
+{id:"student_loan",label:"Student Loan",icon:"🎓",color:"#DDA0DD"},
+{id:"other",label:"Other",icon:"📋",color:"#B8B8D1"}
+];
+
+const CURRENCY_SYMBOLS={PHP:"₱",USD:"$",EUR:"€",GBP:"£",SGD:"S$",JPY:"¥",AUD:"A$",CAD:"C$",MYR:"RM",THB:"฿"};
+const DEFAULT_CURRENCY="PHP";
+
+const uid=()=>Date.now().toString(36)+Math.random().toString(36).slice(2,8);
+const fmt=(n,cur=DEFAULT_CURRENCY)=>{const s=CURRENCY_SYMBOLS[cur]||"₱";return s+Number(n||0).toLocaleString("en",{minimumFractionDigits:2,maximumFractionDigits:2})};
+
+const daysUntil=(ds)=>{if(!ds)return Infinity;const t=new Date();t.setHours(0,0,0,0);const d=new Date(ds);d.setHours(0,0,0,0);return Math.ceil((d-t)/864e5)};
+const urgencyColor=(d)=>d<0?"#FF4757":d<=3?"#FF6B6B":d<=7?"#FECA57":"#00D2D3";
+const urgencyLabel=(d)=>d<0?Math.abs(d)+"d overdue":d===0?"Due today":d===1?"Due tomorrow":d+"d left";
+
+const getNextDueDate=(loan)=>{
+if(!loan.dueDay)return null;
+const t=new Date();let n=new Date(t.getFullYear(),t.getMonth(),loan.dueDay);
+if(n<=t)n.setMonth(n.getMonth()+1);return n.toISOString().split("T")[0];
+};
+
+const EMPTY_LOAN={id:"",category:"credit_card",name:"",bankName:"",accountNumber:"",totalAmount:"",currentBalance:"",minimumPayment:"",interestRate:"",dueDay:"",startDate:"",endDate:"",notes:"",currency:DEFAULT_CURRENCY,payments:[],isActive:true};
+
+// ═══ STORAGE (localStorage for offline) ═══
+const STORAGE_KEY="debtpilot-loans-v2";
+const SETTINGS_KEY="debtpilot-settings-v1";
+
+const loadData=()=>{try{const d=localStorage.getItem(STORAGE_KEY);return d?JSON.parse(d):[];}catch{return[];}};
+const saveData=(loans)=>{try{localStorage.setItem(STORAGE_KEY,JSON.stringify(loans));}catch(e){console.error(e);}};
+const loadSettings=()=>{try{const s=localStorage.getItem(SETTINGS_KEY);return s?JSON.parse(s):{currency:DEFAULT_CURRENCY};}catch{return{currency:DEFAULT_CURRENCY};}};
+const saveSettings=(s)=>{try{localStorage.setItem(SETTINGS_KEY,JSON.stringify(s));}catch{}};
+
+const getCat=(id)=>CATEGORIES.find(c=>c.id===id)||CATEGORIES[6];
+
+// ═══ PROGRESS RING ═══
+function ProgressRing({progress,size=52,stroke=5,color="#00D2D3"}){
+const r=(size-stroke)/2,circ=2*Math.PI*r,off=circ-Math.min(progress,1)*circ;
+return h("svg",{width:size,height:size,style:{transform:"rotate(-90deg)"}},
+h("circle",{cx:size/2,cy:size/2,r,fill:"none",stroke:"rgba(255,255,255,.06)",strokeWidth:stroke}),
+h("circle",{cx:size/2,cy:size/2,r,fill:"none",stroke:color,strokeWidth:stroke,strokeDasharray:circ,strokeDashoffset:off,strokeLinecap:"round",style:{transition:"stroke-dashoffset 1s cubic-bezier(.4,0,.2,1)"}})
+);
+}
+
+// ═══ DONUT CHART ═══
+function DonutChart({segments,size=120}){
+const r=58,circ=2*Math.PI*r;let offset=0;
+return h("svg",{width:size,height:size,viewBox:"0 0 160 160"},
+segments.map((seg,i)=>{
+const dash=circ*seg.pct;
+const el=h("circle",{key:i,cx:80,cy:80,r,fill:"none",stroke:seg.color,strokeWidth:18,strokeDasharray:dash+" "+(circ-dash),strokeDashoffset:-offset,style:{transition:"all 1s cubic-bezier(.4,0,.2,1)",opacity:.9},transform:"rotate(-90 80 80)"});
+offset+=dash;return el;
+}),
+h("circle",{cx:80,cy:80,r:46,fill:"#0A0A0F"})
+);
+}
+
+// ═══ TAB BAR ═══
+function TabBar({active,onChange}){
+const tabs=[{id:"dashboard",label:"Overview",icon:"◉"},{id:"loans",label:"Loans",icon:"☰"},{id:"calendar",label:"Schedule",icon:"▦"},{id:"settings",label:"Settings",icon:"⚙"}];
+return h("div",{style:{position:"fixed",bottom:0,left:"50%",transform:"translateX(-50%)",width:"100%",maxWidth:430,zIndex:100,background:"rgba(10,10,15,.85)",WebkitBackdropFilter:"blur(30px)",backdropFilter:"blur(30px)",borderTop:"1px solid rgba(255,255,255,.06)",display:"flex",justifyContent:"space-around",alignItems:"center",paddingBottom:"env(safe-area-inset-bottom,8px)",paddingTop:8}},
+tabs.map(t=>h("button",{key:t.id,onClick:()=>onChange(t.id),style:{background:"none",border:"none",color:active===t.id?"#00D2D3":"rgba(255,255,255,.35)",display:"flex",flexDirection:"column",alignItems:"center",gap:2,fontSize:10,fontWeight:600,cursor:"pointer",padding:"4px 16px",transition:"all .3s",letterSpacing:.5}},h("span",{style:{fontSize:20,lineHeight:1}},t.icon),t.label))
+);
+}
+
+// ═══ LOAN CARD ═══
+function LoanCard({loan,onEdit,onPayment,currency}){
+const cat=getCat(loan.category),nextDue=getNextDueDate(loan),days=daysUntil(nextDue);
+const paidPct=loan.totalAmount>0?Math.max(0,1-(loan.currentBalance/loan.totalAmount)):0;
+const totalPaid=(loan.payments||[]).reduce((s,p)=>s+Number(p.amount||0),0);
+
+return h("div",{className:"glass press fade-in",onClick:()=>onEdit(loan),style:{padding:"18px 20px",cursor:"pointer",position:"relative",overflow:"hidden"}},
+h("div",{style:{position:"absolute",top:0,left:0,right:0,height:3,background:"linear-gradient(90deg,"+cat.color+"88,"+cat.color+"22)"}}),
+// Header
+h("div",{style:{display:"flex",justifyContent:"space-between",alignItems:"flex-start",marginBottom:14}},
+h("div",{style:{display:"flex",gap:12,alignItems:"center"}},
+h("div",{style:{width:44,height:44,borderRadius:14,display:"flex",alignItems:"center",justifyContent:"center",fontSize:22,background:cat.color+"18",border:"1px solid "+cat.color+"30"}},cat.icon),
+h("div",null,
+h("div",{style:{fontWeight:700,fontSize:16,letterSpacing:-.3}},loan.name||"Untitled"),
+h("div",{style:{fontSize:12,color:"rgba(255,255,255,.4)",marginTop:2}},loan.bankName+(loan.accountNumber?" · ···"+loan.accountNumber.slice(-4):""))
+)),
+nextDue&&h("div",{style:{background:urgencyColor(days)+"18",border:"1px solid "+urgencyColor(days)+"40",borderRadius:10,padding:"4px 10px",fontSize:11,fontWeight:700,color:urgencyColor(days),letterSpacing:.3}},urgencyLabel(days))
+),
+// Body
+h("div",{style:{display:"flex",justifyContent:"space-between",alignItems:"flex-end"}},
+h("div",null,
+h("div",{style:{fontSize:11,color:"rgba(255,255,255,.35)",fontWeight:600,letterSpacing:1,textTransform:"uppercase",marginBottom:4}},"Balance"),
+h("div",{style:{fontSize:26,fontWeight:800,letterSpacing:-1,lineHeight:1}},fmt(loan.currentBalance,currency)),
+loan.minimumPayment>0&&h("div",{style:{fontSize:12,color:"rgba(255,255,255,.4)",marginTop:6}},"Min. payment: "+fmt(loan.minimumPayment,currency))
+),
+loan.totalAmount>0&&h("div",{style:{textAlign:"right",position:"relative",width:52,height:52}},
+h(ProgressRing,{progress:paidPct,size:52,stroke:5,color:cat.color}),
+h("div",{style:{position:"absolute",inset:0,display:"flex",alignItems:"center",justifyContent:"center",fontSize:11,fontWeight:800,color:cat.color}},Math.round(paidPct*100)+"%")
+)
+),
+// Footer info
+loan.interestRate>0&&h("div",{style:{marginTop:12,padding:"8px 12px",borderRadius:10,background:"rgba(255,255,255,.03)",display:"flex",gap:16,fontSize:12}},
+h("span",{style:{color:"rgba(255,255,255,.4)"}},h("span",null,"APR "),h("strong",{style:{color:"#F0F0F5"}},loan.interestRate+"%")),
+totalPaid>0&&h("span",{style:{color:"rgba(255,255,255,.4)"}},h("span",null,"Paid "),h("strong",{style:{color:"#4ECDC4"}},fmt(totalPaid,currency))),
+loan.dueDay&&h("span",{style:{color:"rgba(255,255,255,.4)"}},h("span",null,"Due "),h("strong",{style:{color:"#F0F0F5"}},"Day "+loan.dueDay))
+),
+// Payment button
+h("button",{onClick:e=>{e.stopPropagation();onPayment(loan)},style:{marginTop:14,width:"100%",padding:12,borderRadius:14,border:"none",background:"linear-gradient(135deg,"+cat.color+"30,"+cat.color+"10)",color:cat.color,fontWeight:700,fontSize:14,cursor:"pointer",transition:"all .2s",letterSpacing:.3,fontFamily:"inherit"}},h("span",null,"+ Record Payment"))
+);
+}
+
+// ═══ LOAN FORM MODAL ═══
+function LoanFormModal({loan,onSave,onDelete,onClose,currency}){
+const[form,setForm]=useState({...EMPTY_LOAN,...loan,currency:(loan&&loan.currency)||currency});
+const isEdit=!!(loan&&loan.id);
+const set=(k,v)=>setForm(p=>({...p,[k]:v}));
+
+const handleSave=()=>{if(!form.name.trim())return;onSave({...form,id:form.id||uid()})};
+
+const inp=(label,key,type,placeholder,extra)=>h("div",extra||null,
+h("label",{className:"label"},label),
+h("input",{className:"input-field",type:type||"text",value:form[key]||"",onChange:e=>set(key,type==="number"?e.target.value:e.target.value),placeholder,inputMode:type==="number"?"decimal":undefined,...(key==="dueDay"?{min:1,max:31,inputMode:"numeric"}:{})})
+);
+
+return h("div",{className:"modal-overlay",onClick:onClose},
+h("div",{className:"modal-sheet",onClick:e=>e.stopPropagation()},
+// Header
+h("div",{style:{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:24}},
+h("h2",{style:{fontSize:22,fontWeight:800,letterSpacing:-.5}},isEdit?"Edit Loan":"Add New Loan"),
+h("button",{onClick:onClose,style:{background:"rgba(255,255,255,.08)",border:"none",color:"#F0F0F5",width:36,height:36,borderRadius:18,fontSize:18,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center"}},"✕")
+),
+// Categories
+h("label",{className:"label"},"Category"),
+h("div",{style:{display:"flex",gap:8,flexWrap:"wrap",marginBottom:20}},
+CATEGORIES.map(c=>h("button",{key:c.id,onClick:()=>set("category",c.id),style:{padding:"8px 14px",borderRadius:12,border:"1.5px solid "+(form.category===c.id?c.color:"rgba(255,255,255,.08)"),background:form.category===c.id?c.color+"15":"rgba(255,255,255,.03)",color:form.category===c.id?c.color:"rgba(255,255,255,.5)",fontSize:13,fontWeight:600,cursor:"pointer",display:"flex",gap:6,alignItems:"center",transition:"all .2s"}},h("span",null,c.icon),c.label))
+),
+// Fields
+h("div",{style:{display:"flex",flexDirection:"column",gap:16}},
+inp("Loan / Card Name *","name","text","e.g. BDO Visa Card"),
+inp("Bank / Lender","bankName","text","e.g. BDO, BPI, Metrobank"),
+inp("Account / Card Number","accountNumber","text","Last 4 digits or full number"),
+h("div",{style:{display:"grid",gridTemplateColumns:"1fr 1fr",gap:12}},
+inp("Total Amount","totalAmount","number","0.00"),
+inp("Current Balance","currentBalance","number","0.00")
+),
+h("div",{style:{display:"grid",gridTemplateColumns:"1fr 1fr",gap:12}},
+inp("Min. Payment","minimumPayment","number","0.00"),
+inp("Interest Rate %","interestRate","number","0.00")
+),
+h("div",{style:{display:"grid",gridTemplateColumns:"1fr 1fr",gap:12}},
+h("div",null,h("label",{className:"label"},"Due Day (1-31)"),h("input",{className:"input-field",type:"number",min:1,max:31,inputMode:"numeric",value:form.dueDay||"",onChange:e=>set("dueDay",Math.min(31,Math.max(1,Number(e.target.value)))),placeholder:"15"})),
+h("div",null,h("label",{className:"label"},"Currency"),h("select",{className:"input-field",value:form.currency||currency,onChange:e=>set("currency",e.target.value),style:{appearance:"none"}},Object.entries(CURRENCY_SYMBOLS).map(([c,s])=>h("option",{key:c,value:c,style:{background:"#1a1a2e"}},c+" ("+s+")"))))
+),
+h("div",{style:{display:"grid",gridTemplateColumns:"1fr 1fr",gap:12}},
+h("div",null,h("label",{className:"label"},"Start Date"),h("input",{className:"input-field",type:"date",value:form.startDate||"",onChange:e=>set("startDate",e.target.value),style:{colorScheme:"dark"}})),
+h("div",null,h("label",{className:"label"},"End Date"),h("input",{className:"input-field",type:"date",value:form.endDate||"",onChange:e=>set("endDate",e.target.value),style:{colorScheme:"dark"}}))
+),
+h("div",null,h("label",{className:"label"},"Notes"),h("textarea",{className:"input-field",value:form.notes||"",onChange:e=>set("notes",e.target.value),placeholder:"Any additional details...",rows:3,style:{resize:"vertical"}}))
+),
+h("button",{onClick:handleSave,style:{marginTop:24,width:"100%",padding:16,borderRadius:16,border:"none",background:"linear-gradient(135deg,#00D2D3,#00A8A8)",color:"#0A0A0F",fontSize:16,fontWeight:800,cursor:"pointer",letterSpacing:.5,fontFamily:"inherit"}},isEdit?"Save Changes":"Add Loan"),
+isEdit&&h("button",{onClick:()=>{onDelete(loan.id);onClose()},style:{marginTop:10,width:"100%",padding:14,borderRadius:16,border:"1px solid rgba(255,71,87,.3)",background:"rgba(255,71,87,.08)",color:"#FF4757",fontSize:15,fontWeight:700,cursor:"pointer",fontFamily:"inherit"}},"Delete Loan")
+));
+}
+
+// ═══ PAYMENT MODAL ═══
+function PaymentModal({loan,onSave,onClose,currency}){
+const[amount,setAmount]=useState(loan.minimumPayment||"");
+const[date,setDate]=useState(new Date().toISOString().split("T")[0]);
+const[note,setNote]=useState("");
+
+const handleSave=()=>{
+if(!amount||Number(amount)<=0)return;
+const payment={id:uid(),amount:Number(amount),date,note};
+const newBal=Math.max(0,Number(loan.currentBalance)-Number(amount));
+onSave(loan.id,payment,newBal);onClose();
+};
+
+const quickBtns=[loan.minimumPayment,loan.currentBalance].filter(Boolean);
+
+return h("div",{className:"modal-overlay",onClick:onClose},
+h("div",{className:"modal-sheet",onClick:e=>e.stopPropagation()},
+h("h2",{style:{fontSize:22,fontWeight:800,letterSpacing:-.5,marginBottom:6}},"Record Payment"),
+h("p",{style:{color:"rgba(255,255,255,.4)",fontSize:14,marginBottom:24}},loan.name+" · Balance: "+fmt(loan.currentBalance,currency)),
+quickBtns.length>0&&h("div",{style:{display:"flex",gap:8,marginBottom:20,flexWrap:"wrap"}},
+quickBtns.map((v,i)=>h("button",{key:i,onClick:()=>setAmount(v),style:{padding:"8px 14px",borderRadius:10,fontSize:13,fontWeight:600,cursor:"pointer",border:"1px solid "+(Number(amount)===Number(v)?"#00D2D3":"rgba(255,255,255,.1)"),background:Number(amount)===Number(v)?"rgba(0,210,211,.1)":"rgba(255,255,255,.03)",color:Number(amount)===Number(v)?"#00D2D3":"rgba(255,255,255,.5)"}},(i===0?"Min. ":"Full ")+fmt(v,currency)))
+),
+h("div",{style:{display:"flex",flexDirection:"column",gap:16}},
+h("div",null,h("label",{className:"label"},"Amount"),h("input",{className:"input-field",type:"number",value:amount,onChange:e=>setAmount(e.target.value),placeholder:"0.00",inputMode:"decimal",autoFocus:true})),
+h("div",null,h("label",{className:"label"},"Date"),h("input",{className:"input-field",type:"date",value:date,onChange:e=>setDate(e.target.value),style:{colorScheme:"dark"}})),
+h("div",null,h("label",{className:"label"},"Note (optional)"),h("input",{className:"input-field",value:note,onChange:e=>setNote(e.target.value),placeholder:"e.g. Monthly payment"}))
+),
+h("button",{onClick:handleSave,style:{marginTop:24,width:"100%",padding:16,borderRadius:16,border:"none",background:"linear-gradient(135deg,#4ECDC4,#2ECC71)",color:"#0A0A0F",fontSize:16,fontWeight:800,cursor:"pointer",fontFamily:"inherit"}},"Confirm Payment")
+));
+}
+
+// ═══ PAYMENT HISTORY ═══
+function PaymentHistory({loan,onClose,currency}){
+const payments=[...(loan.payments||[])].sort((a,b)=>new Date(b.date)-new Date(a.date));
+const total=payments.reduce((s,p)=>s+Number(p.amount),0);
+return h("div",{className:"modal-overlay",onClick:onClose},
+h("div",{className:"modal-sheet",onClick:e=>e.stopPropagation()},
+h("div",{style:{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:20}},
+h("div",null,h("h2",{style:{fontSize:20,fontWeight:800}},"Payment History"),h("p",{style:{color:"rgba(255,255,255,.4)",fontSize:13,marginTop:2}},loan.name)),
+h("button",{onClick:onClose,style:{background:"rgba(255,255,255,.08)",border:"none",color:"#F0F0F5",width:36,height:36,borderRadius:18,fontSize:18,cursor:"pointer"}},"✕")
+),
+h("div",{className:"glass",style:{padding:"14px 18px",marginBottom:20,textAlign:"center"}},
+h("div",{style:{fontSize:12,color:"rgba(255,255,255,.4)",fontWeight:600,letterSpacing:1}},"TOTAL PAID"),
+h("div",{style:{fontSize:28,fontWeight:800,color:"#4ECDC4",marginTop:4}},fmt(total,currency))
+),
+payments.length===0?h("p",{style:{textAlign:"center",color:"rgba(255,255,255,.3)",padding:40}},"No payments recorded yet"):
+h("div",{style:{display:"flex",flexDirection:"column",gap:8}},
+payments.map(p=>h("div",{key:p.id,style:{display:"flex",justifyContent:"space-between",alignItems:"center",padding:"14px 16px",borderRadius:14,background:"rgba(255,255,255,.03)"}},
+h("div",null,h("div",{style:{fontSize:15,fontWeight:600}},fmt(p.amount,currency)),p.note&&h("div",{style:{fontSize:12,color:"rgba(255,255,255,.35)",marginTop:2}},p.note)),
+h("div",{style:{fontSize:13,color:"rgba(255,255,255,.35)"}},new Date(p.date).toLocaleDateString("en",{month:"short",day:"numeric",year:"numeric"}))
+))
+)
+));
+}
+
+// ═══ DASHBOARD VIEW ═══
+function DashboardView({loans,currency,onEdit,onPayment}){
+const active=loans.filter(l=>l.isActive);
+const totalDebt=active.reduce((s,l)=>s+Number(l.currentBalance||0),0);
+const totalOriginal=active.reduce((s,l)=>s+Number(l.totalAmount||l.currentBalance||0),0);
+const totalMinPay=active.reduce((s,l)=>s+Number(l.minimumPayment||0),0);
+const totalPaid=active.reduce((s,l)=>s+(l.payments||[]).reduce((ps,p)=>ps+Number(p.amount),0),0);
+const paidPct=totalOriginal>0?(totalOriginal-totalDebt)/totalOriginal:0;
+
+const upcoming=active.map(l=>({...l,nextDue:getNextDueDate(l),daysLeft:daysUntil(getNextDueDate(l))})).filter(l=>l.nextDue).sort((a,b)=>a.daysLeft-b.daysLeft).slice(0,5);
+
+const donutSegs=active.filter(l=>Number(l.currentBalance)>0).map(l=>{const cat=getCat(l.category);return{color:cat.color,pct:Number(l.currentBalance)/totalDebt,label:l.name}});
+
+const catSummary=CATEGORIES.map(c=>{const cl=active.filter(l=>l.category===c.id);return{...c,count:cl.length,balance:cl.reduce((s,l)=>s+Number(l.currentBalance||0),0)}}).filter(c=>c.count>0);
+
+return h("div",{style:{padding:"0 16px 120px"}},
+// Header
+h("div",{style:{paddingTop:"env(safe-area-inset-top,16px)",marginBottom:24}},
+h("div",{style:{fontSize:13,color:"rgba(255,255,255,.35)",fontWeight:600,letterSpacing:1.5,textTransform:"uppercase"}},"DebtPilot"),
+h("h1",{style:{fontSize:28,fontWeight:800,letterSpacing:-.8,marginTop:4}},"Overview")
+),
+// Hero card
+h("div",{className:"glass fade-in",style:{padding:"24px 22px",marginBottom:16,background:"linear-gradient(135deg,rgba(0,210,211,.08),rgba(78,205,196,.04))",border:"1px solid rgba(0,210,211,.12)"}},
+h("div",{style:{display:"flex",justifyContent:"space-between",alignItems:"center"}},
+h("div",null,
+h("div",{style:{fontSize:12,color:"rgba(255,255,255,.4)",fontWeight:600,letterSpacing:1,textTransform:"uppercase"}},"Total Outstanding"),
+h("div",{style:{fontSize:34,fontWeight:900,letterSpacing:-1.5,marginTop:6,lineHeight:1}},fmt(totalDebt,currency)),
+h("div",{style:{display:"flex",gap:16,marginTop:14}},
+h("div",null,h("div",{style:{fontSize:10,color:"rgba(255,255,255,.3)",fontWeight:600,letterSpacing:1}},"MONTHLY MIN"),h("div",{style:{fontSize:17,fontWeight:700,color:"#FECA57",marginTop:2}},fmt(totalMinPay,currency))),
+h("div",null,h("div",{style:{fontSize:10,color:"rgba(255,255,255,.3)",fontWeight:600,letterSpacing:1}},"TOTAL PAID"),h("div",{style:{fontSize:17,fontWeight:700,color:"#4ECDC4",marginTop:2}},fmt(totalPaid,currency)))
+)),
+donutSegs.length>0&&h("div",{style:{position:"relative"}},
+h(DonutChart,{segments:donutSegs,size:120}),
+h("div",{style:{position:"absolute",inset:0,display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center"}},
+h("div",{style:{fontSize:20,fontWeight:900,color:"#00D2D3"}},Math.round(paidPct*100)+"%"),
+h("div",{style:{fontSize:9,color:"rgba(255,255,255,.35)",fontWeight:600}},"PAID OFF")
+))
+)),
+// Category cards
+catSummary.length>0&&h("div",{style:{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10,marginBottom:16}},
+catSummary.map(c=>h("div",{key:c.id,className:"glass",style:{padding:"14px 16px",display:"flex",gap:12,alignItems:"center"}},
+h("div",{style:{width:38,height:38,borderRadius:12,display:"flex",alignItems:"center",justifyContent:"center",fontSize:18,background:c.color+"15"}},c.icon),
+h("div",null,
+h("div",{style:{fontSize:13,fontWeight:700,color:c.color}},fmt(c.balance,currency)),
+h("div",{style:{fontSize:11,color:"rgba(255,255,255,.35)"}},c.count+" "+c.label.toLowerCase()+(c.count>1?"s":""))
+)))
+),
+// Upcoming
+upcoming.length>0&&[
+h("h3",{key:"h",style:{fontSize:18,fontWeight:800,letterSpacing:-.3,marginBottom:12,marginTop:24}},"Upcoming Payments"),
+h("div",{key:"l",style:{display:"flex",flexDirection:"column",gap:8}},
+upcoming.map(l=>{const cat=getCat(l.category);return h("div",{key:l.id,className:"glass press",onClick:()=>onPayment(l),style:{padding:"14px 18px",display:"flex",justifyContent:"space-between",alignItems:"center",cursor:"pointer"}},
+h("div",{style:{display:"flex",gap:12,alignItems:"center"}},
+h("div",{style:{width:6,height:36,borderRadius:3,background:urgencyColor(l.daysLeft)}}),
+h("div",null,h("div",{style:{fontSize:15,fontWeight:700}},l.name),h("div",{style:{fontSize:12,color:"rgba(255,255,255,.35)",marginTop:2}},new Date(l.nextDue).toLocaleDateString("en",{month:"short",day:"numeric"})))
+),
+h("div",{style:{textAlign:"right"}},
+h("div",{style:{fontSize:16,fontWeight:700,color:urgencyColor(l.daysLeft)}},urgencyLabel(l.daysLeft)),
+h("div",{style:{fontSize:13,color:"rgba(255,255,255,.4)"}},fmt(l.minimumPayment||l.currentBalance,currency))
+)
+)}))
+],
+active.length===0&&h("div",{style:{textAlign:"center",padding:"60px 20px"}},
+h("div",{style:{fontSize:48,marginBottom:16}},"📊"),
+h("h3",{style:{fontSize:20,fontWeight:800,marginBottom:8}},"No Loans Yet"),
+h("p",{style:{color:"rgba(255,255,255,.4)",fontSize:15}},"Tap the + button to add your first loan or credit card")
+)
+);
+}
+
+// ═══ LOANS LIST VIEW ═══
+function LoansView({loans,onEdit,onPayment,currency}){
+const[filter,setFilter]=useState("all");
+const[search,setSearch]=useState("");
+const filtered=loans.filter(l=>{
+if(filter!=="all"&&l.category!==filter)return false;
+if(search&&!l.name.toLowerCase().includes(search.toLowerCase())&&!(l.bankName||"").toLowerCase().includes(search.toLowerCase()))return false;
+return l.isActive;
+});
+return h("div",{style:{padding:"0 16px 120px"}},
+h("div",{style:{paddingTop:"env(safe-area-inset-top,16px)",marginBottom:20}},
+h("h1",{style:{fontSize:28,fontWeight:800,letterSpacing:-.8}},"My Loans"),
+h("p",{style:{color:"rgba(255,255,255,.35)",fontSize:14,marginTop:4}},filtered.length+" active "+(filtered.length===1?"loan":"loans"))
+),
+h("div",{style:{position:"relative",marginBottom:14}},
+h("input",{value:search,onChange:e=>setSearch(e.target.value),placeholder:"Search loans...",style:{width:"100%",padding:"12px 16px 12px 42px",borderRadius:16,border:"1px solid rgba(255,255,255,.06)",background:"rgba(255,255,255,.04)",color:"#F0F0F5",fontSize:15,outline:"none",boxSizing:"border-box",fontFamily:"inherit"}}),
+h("span",{style:{position:"absolute",left:14,top:"50%",transform:"translateY(-50%)",color:"rgba(255,255,255,.25)",fontSize:16}},"🔍")
+),
+h("div",{style:{display:"flex",gap:8,overflowX:"auto",paddingBottom:8,marginBottom:16,WebkitOverflowScrolling:"touch"}},
+h("button",{className:"filter-btn"+(filter==="all"?" active":""),onClick:()=>setFilter("all")},"All"),
+CATEGORIES.map(c=>h("button",{key:c.id,className:"filter-btn"+(filter===c.id?" active":""),onClick:()=>setFilter(c.id),style:{"--f-color":c.color,"--f-bg":c.color+"15"}},c.icon+" "+c.label))
+),
+h("div",{style:{display:"flex",flexDirection:"column",gap:14}},filtered.map(l=>h(LoanCard,{key:l.id,loan:l,onEdit,onPayment,currency}))),
+filtered.length===0&&h("div",{style:{textAlign:"center",padding:"60px 20px",color:"rgba(255,255,255,.3)"}},h("div",{style:{fontSize:36,marginBottom:12}},"🔍"),h("p",null,"No loans match your filters"))
+);
+}
+
+// ═══ CALENDAR VIEW ═══
+function CalendarView({loans,currency,onPayment}){
+const active=loans.filter(l=>l.isActive&&l.dueDay);
+const months=[];const now=new Date();
+for(let i=0;i<3;i++){
+const m=new Date(now.getFullYear(),now.getMonth()+i,1);
+const ml=active.map(l=>{const dd=new Date(m.getFullYear(),m.getMonth(),l.dueDay);return{...l,dueDate:dd.toISOString().split("T")[0],daysLeft:daysUntil(dd.toISOString().split("T")[0])}}).sort((a,b)=>a.dueDate.localeCompare(b.dueDate));
+months.push({label:m.toLocaleDateString("en",{month:"long",year:"numeric"}),loans:ml,total:ml.reduce((s,l)=>s+Number(l.minimumPayment||0),0),isCurrent:i===0});
+}
+return h("div",{style:{padding:"0 16px 120px"}},
+h("div",{style:{paddingTop:"env(safe-area-inset-top,16px)",marginBottom:24}},
+h("h1",{style:{fontSize:28,fontWeight:800,letterSpacing:-.8}},"Payment Schedule"),
+h("p",{style:{color:"rgba(255,255,255,.35)",fontSize:14,marginTop:4}},"Next 3 months outlook")
+),
+months.map((month,mi)=>h("div",{key:mi,style:{marginBottom:28}},
+h("div",{style:{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:12}},
+h("h3",{style:{fontSize:18,fontWeight:800,color:month.isCurrent?"#00D2D3":"#F0F0F5"}},month.label),
+h("span",{style:{fontSize:14,fontWeight:700,color:"rgba(255,255,255,.4)"}},fmt(month.total,currency)+" due")
+),
+h("div",{style:{display:"flex",flexDirection:"column",gap:8}},
+month.loans.map(l=>{const cat=getCat(l.category),isPast=month.isCurrent&&l.daysLeft<0;
+return h("div",{key:l.id,className:"glass press",onClick:()=>onPayment(l),style:{padding:"14px 16px",display:"flex",gap:14,alignItems:"center",cursor:"pointer",opacity:isPast?.5:1}},
+h("div",{style:{width:44,height:44,borderRadius:14,display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",background:(month.isCurrent?urgencyColor(l.daysLeft):cat.color)+"15",border:"1px solid "+(month.isCurrent?urgencyColor(l.daysLeft):cat.color)+"30"}},
+h("div",{style:{fontSize:16,fontWeight:900,lineHeight:1}},l.dueDay),
+h("div",{style:{fontSize:8,fontWeight:600,color:"rgba(255,255,255,.4)",textTransform:"uppercase"}},new Date(l.dueDate).toLocaleDateString("en",{month:"short"}))
+),
+h("div",{style:{flex:1}},h("div",{style:{fontSize:15,fontWeight:700}},l.name),h("div",{style:{fontSize:12,color:"rgba(255,255,255,.35)"}},l.bankName)),
+h("div",{style:{textAlign:"right"}},
+h("div",{style:{fontSize:15,fontWeight:700}},fmt(l.minimumPayment||l.currentBalance,currency)),
+month.isCurrent&&h("div",{style:{fontSize:11,fontWeight:600,color:urgencyColor(l.daysLeft),marginTop:2}},urgencyLabel(l.daysLeft))
+)
+)})
+),
+month.loans.length===0&&h("p",{style:{color:"rgba(255,255,255,.2)",fontSize:14,textAlign:"center",padding:20}},"No scheduled payments")
+))
+);
+}
+
+// ═══ SETTINGS VIEW ═══
+function SettingsView({loans,settings,onSettingsChange,onImport}){
+const fileRef=useRef(null);
+const handleExport=()=>{
+const d=JSON.stringify({version:2,exportDate:new Date().toISOString(),settings,loans},null,2);
+const b=new Blob([d],{type:"application/json"});const u=URL.createObjectURL(b);
+const a=document.createElement("a");a.href=u;a.download="debtpilot-backup-"+new Date().toISOString().split("T")[0]+".json";a.click();URL.revokeObjectURL(u);
+};
+const handleImportFile=e=>{
+const f=e.target.files[0];if(!f)return;
+const r=new FileReader();r.onload=ev=>{try{const d=JSON.parse(ev.target.result);if(d.loans&&Array.isArray(d.loans)){onImport(d.loans,d.settings)}else{alert("Invalid backup file format")}}catch{alert("Failed to parse backup file")}};r.readAsText(f);
+};
+const handleCSV=()=>{
+const csv=["Name,Category,Bank,Account,Total,Balance,Min Payment,Interest Rate,Due Day,Currency,Notes",...loans.map(l=>['"'+l.name+'"',l.category,'"'+l.bankName+'"','"'+l.accountNumber+'"',l.totalAmount,l.currentBalance,l.minimumPayment,l.interestRate,l.dueDay,l.currency||settings.currency,'"'+(l.notes||"")+'"'].join(","))].join("\n");
+const b=new Blob([csv],{type:"text/csv"});const u=URL.createObjectURL(b);
+const a=document.createElement("a");a.href=u;a.download="debtpilot-export-"+new Date().toISOString().split("T")[0]+".csv";a.click();URL.revokeObjectURL(u);
+};
+
+const totalPaid=loans.reduce((s,l)=>s+(l.payments||[]).reduce((ps,p)=>ps+Number(p.amount),0),0);
+const totalPayments=loans.reduce((s,l)=>s+(l.payments||[]).length,0);
+
+return h("div",{style:{padding:"0 16px 120px"}},
+h("div",{style:{paddingTop:"env(safe-area-inset-top,16px)",marginBottom:24}},
+h("h1",{style:{fontSize:28,fontWeight:800,letterSpacing:-.8}},"Settings")
+),
+// Stats
+h("div",{className:"glass",style:{padding:20,marginBottom:20}},
+h("h3",{style:{fontSize:14,fontWeight:700,color:"rgba(255,255,255,.4)",letterSpacing:1,textTransform:"uppercase",marginBottom:16}},"Statistics"),
+h("div",{style:{display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:12}},
+[{label:"Loans",value:loans.filter(l=>l.isActive).length},{label:"Payments",value:totalPayments},{label:"Total Paid",value:fmt(totalPaid,settings.currency)}].map((s,i)=>h("div",{key:i,style:{textAlign:"center"}},
+h("div",{style:{fontSize:22,fontWeight:900,color:"#00D2D3"}},s.value),
+h("div",{style:{fontSize:11,color:"rgba(255,255,255,.35)",marginTop:2}},s.label)
+)))
+),
+// Currency
+h("div",{className:"glass",style:{padding:20,marginBottom:16}},
+h("h3",{style:{fontSize:14,fontWeight:700,color:"rgba(255,255,255,.4)",letterSpacing:1,textTransform:"uppercase",marginBottom:12}},"Default Currency"),
+h("div",{style:{display:"flex",gap:8,flexWrap:"wrap"}},
+Object.entries(CURRENCY_SYMBOLS).map(([code,sym])=>h("button",{key:code,className:"currency-btn"+(settings.currency===code?" active":""),onClick:()=>onSettingsChange({...settings,currency:code})},sym+" "+code))
+)
+),
+// Data
+h("div",{style:{display:"flex",flexDirection:"column",gap:10}},
+h("h3",{style:{fontSize:14,fontWeight:700,color:"rgba(255,255,255,.4)",letterSpacing:1,textTransform:"uppercase",marginTop:8,marginBottom:4}},"Data Management"),
+h("button",{className:"data-btn",onClick:handleExport},h("span",null,"📤 Export Backup (JSON)"),h("span",{style:{color:"rgba(255,255,255,.3)"}},"→")),
+h("button",{className:"data-btn",onClick:()=>fileRef.current&&fileRef.current.click()},h("span",null,"📥 Import Backup"),h("span",{style:{color:"rgba(255,255,255,.3)"}},"→")),
+h("input",{ref:fileRef,type:"file",accept:".json",onChange:handleImportFile,style:{display:"none"}}),
+h("button",{className:"data-btn",onClick:handleCSV},h("span",null,"📊 Export as CSV (Spreadsheet)"),h("span",{style:{color:"rgba(255,255,255,.3)"}},"→"))
+),
+h("div",{style:{marginTop:32,textAlign:"center",color:"rgba(255,255,255,.15)",fontSize:12}},
+h("div",{style:{fontSize:16,marginBottom:4}},"🧭"),
+"DebtPilot v2.0 · Your data stays on your device"
+)
+);
+}
+
+// ═══ MAIN APP ═══
+function App(){
+const[loans,setLoans]=useState(loadData);
+const[settings,setSettings]=useState(loadSettings);
+const[tab,setTab]=useState("dashboard");
+const[modal,setModal]=useState(null);
+
+useEffect(()=>{saveData(loans)},[loans]);
+useEffect(()=>{saveSettings(settings)},[settings]);
+
+const handleSaveLoan=useCallback(loan=>{
+setLoans(prev=>{const idx=prev.findIndex(l=>l.id===loan.id);if(idx>=0){const n=[...prev];n[idx]=loan;return n}return[...prev,loan]});
+setModal(null);
+},[]);
+
+const handleDeleteLoan=useCallback(id=>{setLoans(prev=>prev.filter(l=>l.id!==id))},[]);
+
+const handlePayment=useCallback((loanId,payment,newBalance)=>{
+setLoans(prev=>prev.map(l=>l.id!==loanId?l:{...l,currentBalance:newBalance,payments:[...(l.payments||[]),payment]}));
+},[]);
+
+const handleImport=useCallback((importedLoans,importedSettings)=>{
+if(confirm("Import "+importedLoans.length+" loans? This will replace your current data.")){
+setLoans(importedLoans);if(importedSettings)setSettings(importedSettings);
+}
+},[]);
+
+const cur=settings.currency||DEFAULT_CURRENCY;
+
+return h("div",{style:{fontFamily:"'SF Pro Display',-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif",background:"#0A0A0F",color:"#F0F0F5",minHeight:"100vh",maxWidth:430,margin:"0 auto",position:"relative",overflow:"hidden",WebkitFontSmoothing:"antialiased"}},
+// Ambient BG
+h("div",{style:{position:"fixed",top:-100,left:-100,width:300,height:300,background:"radial-gradient(circle,rgba(0,210,211,.06) 0%,transparent 70%)",pointerEvents:"none",zIndex:0}}),
+h("div",{style:{position:"relative",zIndex:1}},
+tab==="dashboard"&&h(DashboardView,{loans,currency:cur,onEdit:l=>setModal({type:"loan",data:l}),onPayment:l=>setModal({type:"payment",data:l})}),
+tab==="loans"&&h(LoansView,{loans,currency:cur,onEdit:l=>setModal({type:"loan",data:l}),onPayment:l=>setModal({type:"payment",data:l})}),
+tab==="calendar"&&h(CalendarView,{loans,currency:cur,onPayment:l=>setModal({type:"payment",data:l})}),
+tab==="settings"&&h(SettingsView,{loans,settings,onSettingsChange:setSettings,onImport:handleImport})
+),
+// FAB
+h("button",{className:"press",onClick:()=>setModal({type:"loan",data:null}),style:{position:"fixed",bottom:90,right:"calc(50% - 195px)",width:56,height:56,borderRadius:28,border:"none",background:"linear-gradient(135deg,#00D2D3,#00A8A8)",color:"#0A0A0F",fontSize:28,fontWeight:300,cursor:"pointer",boxShadow:"0 8px 32px rgba(0,210,211,.3)",zIndex:50,display:"flex",alignItems:"center",justifyContent:"center"}},"+"),
+h(TabBar,{active:tab,onChange:setTab}),
+// Modals
+modal&&modal.type==="loan"&&h(LoanFormModal,{loan:modal.data,currency:cur,onSave:handleSaveLoan,onDelete:handleDeleteLoan,onClose:()=>setModal(null)}),
+modal&&modal.type==="payment"&&modal.data&&h(PaymentModal,{loan:modal.data,currency:cur,onSave:handlePayment,onClose:()=>setModal(null)})
+);
+}
+
+ReactDOM.render(h(App),document.getElementById("root"));
+</script>
+</body>
+</html>
