@@ -2,1972 +2,1071 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, user-scalable=no">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, viewport-fit=cover">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="LoanPilot">
-<meta name="theme-color" content="#0a0a0f">
-<link rel="apple-touch-icon" href="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAxODAgMTgwIj48cmVjdCB3aWR0aD0iMTgwIiBoZWlnaHQ9IjE4MCIgcng9IjQwIiBmaWxsPSIjMGEwYTBmIi8+PHRleHQgeD0iOTAiIHk9IjExNSIgZm9udC1zaXplPSI5MCIgdGV4dC1hbmNob3I9Im1pZGRsZSIgZmlsbD0iI2Y1YzUxOCI+4oKxPC90ZXh0Pjwvc3ZnPg==">
 <title>LoanPilot</title>
 <style>
-  @import url('https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700&family=JetBrains+Mono:wght@400;500;600&display=swap');
+:root {
+  --primary: #1a3a6b;
+  --primary-light: #2d5aa0;
+  --accent: #4CAF50;
+  --accent-red: #ef4444;
+  --bg: #f0f2f7;
+  --card: #ffffff;
+  --text: #1a1a2e;
+  --text-secondary: #6b7280;
+  --border: #e5e7eb;
+  --shadow: 0 2px 8px rgba(0,0,0,0.08);
+  --radius: 14px;
+  --safe-top: env(safe-area-inset-top, 20px);
+  --safe-bottom: env(safe-area-inset-bottom, 20px);
+}
 
-  :root {
-    --bg: #0a0a0f;
-    --bg-card: #13131a;
-    --bg-card-hover: #1a1a24;
-    --bg-elevated: #1e1e2a;
-    --border: rgba(255,255,255,0.06);
-    --border-active: rgba(245,197,24,0.3);
-    --text-primary: #f0f0f5;
-    --text-secondary: #8a8a9a;
-    --text-muted: #55556a;
-    --accent: #f5c518;
-    --accent-dim: rgba(245,197,24,0.15);
-    --accent-glow: rgba(245,197,24,0.08);
-    --danger: #ff4757;
-    --danger-dim: rgba(255,71,87,0.15);
-    --danger-glow: rgba(255,71,87,0.06);
-    --success: #2ed573;
-    --success-dim: rgba(46,213,115,0.15);
-    --warning: #ffa502;
-    --warning-dim: rgba(255,165,2,0.15);
-    --blue: #3b82f6;
-    --blue-dim: rgba(59,130,246,0.15);
-    --radius: 16px;
-    --radius-sm: 10px;
-    --radius-xs: 6px;
-    --safe-top: env(safe-area-inset-top, 20px);
-    --safe-bottom: env(safe-area-inset-bottom, 20px);
-  }
+* { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
 
-  * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+body {
+  font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Segoe UI', Roboto, sans-serif;
+  background: var(--bg);
+  color: var(--text);
+  min-height: 100vh;
+  min-height: 100dvh;
+  overflow-x: hidden;
+  -webkit-font-smoothing: antialiased;
+  max-width: 500px;
+  margin: 0 auto;
+  box-shadow: 0 0 30px rgba(0,0,0,0.1);
+}
 
-  body {
-    font-family: 'DM Sans', -apple-system, sans-serif;
-    background: var(--bg);
-    color: var(--text-primary);
-    min-height: 100vh;
-    min-height: -webkit-fill-available;
-    overflow-x: hidden;
-    -webkit-font-smoothing: antialiased;
-  }
+/* Header */
+.header {
+  position: sticky;
+  top: 0;
+  z-index: 100;
+  background: var(--primary);
+  padding: calc(var(--safe-top) + 8px) 16px 12px;
+  color: white;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+.header h1 { font-size: 20px; font-weight: 700; letter-spacing: -0.3px; }
+.header-btn {
+  background: rgba(255,255,255,0.15);
+  border: none;
+  color: white;
+  width: 36px; height: 36px;
+  border-radius: 50%;
+  font-size: 20px;
+  cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+}
+.header-actions { display: flex; gap: 8px; }
 
-  /* ── Ambient background ── */
-  body::before {
-    content: '';
-    position: fixed;
-    top: -50%; left: -50%;
-    width: 200%; height: 200%;
-    background: radial-gradient(ellipse at 30% 20%, rgba(245,197,24,0.03) 0%, transparent 50%),
-                radial-gradient(ellipse at 70% 80%, rgba(59,130,246,0.02) 0%, transparent 50%);
-    pointer-events: none;
-    z-index: 0;
-  }
+/* Back button */
+.back-btn {
+  background: none; border: none; color: white;
+  font-size: 24px; cursor: pointer; padding: 0 8px 0 0;
+  display: flex; align-items: center;
+}
 
-  .app {
-    position: relative;
-    z-index: 1;
-    padding: calc(var(--safe-top) + 12px) 16px calc(var(--safe-bottom) + 90px);
-    max-width: 500px;
-    margin: 0 auto;
-  }
+/* Main content */
+.content { padding: 16px 16px calc(var(--safe-bottom) + 16px); max-width: 500px; margin: 0 auto; }
 
-  /* ── Header ── */
-  .header {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    margin-bottom: 24px;
-    padding: 0 2px;
-  }
-  .header-left h1 {
-    font-size: 26px;
-    font-weight: 700;
-    letter-spacing: -0.5px;
-    background: linear-gradient(135deg, var(--text-primary), var(--accent));
-    -webkit-background-clip: text;
-    -webkit-text-fill-color: transparent;
-  }
-  .header-left p {
-    font-size: 13px;
-    color: var(--text-secondary);
-    margin-top: 2px;
-  }
-  .header-actions {
-    display: flex;
-    gap: 8px;
-  }
-  .header-btn {
-    width: 40px; height: 40px;
-    border-radius: 12px;
-    background: var(--bg-card);
-    border: 1px solid var(--border);
-    color: var(--text-secondary);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    cursor: pointer;
-    transition: all 0.2s;
-    font-size: 18px;
-  }
-  .header-btn:active { transform: scale(0.92); background: var(--bg-elevated); }
+/* Creditor Card */
+.creditor-card {
+  background: var(--card);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+  margin-bottom: 14px;
+  overflow: hidden;
+  transition: transform 0.15s;
+}
+.creditor-card:active { transform: scale(0.98); }
+.creditor-header {
+  padding: 16px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  cursor: pointer;
+}
+.creditor-avatar {
+  width: 44px; height: 44px;
+  border-radius: 12px;
+  background: var(--primary);
+  color: white;
+  display: flex; align-items: center; justify-content: center;
+  font-weight: 700; font-size: 16px;
+  flex-shrink: 0;
+}
+.creditor-info { flex: 1; min-width: 0; }
+.creditor-name { font-weight: 600; font-size: 16px; }
+.creditor-meta { font-size: 13px; color: var(--text-secondary); margin-top: 2px; }
+.creditor-arrow { color: var(--text-secondary); font-size: 18px; flex-shrink: 0; }
 
-  /* ── Summary Strip ── */
-  .summary-strip {
-    display: grid;
-    grid-template-columns: 1fr 1fr 1fr;
-    gap: 10px;
-    margin-bottom: 24px;
-  }
-  .summary-card {
-    background: var(--bg-card);
-    border: 1px solid var(--border);
-    border-radius: var(--radius-sm);
-    padding: 14px 12px;
-    text-align: center;
-  }
-  .summary-card.highlight {
-    background: linear-gradient(135deg, var(--accent-dim), var(--accent-glow));
-    border-color: var(--border-active);
-  }
-  .summary-card .label {
-    font-size: 10px;
-    text-transform: uppercase;
-    letter-spacing: 1px;
-    color: var(--text-muted);
-    margin-bottom: 6px;
-    font-weight: 600;
-  }
-  .summary-card .value {
-    font-family: 'JetBrains Mono', monospace;
-    font-size: 16px;
-    font-weight: 600;
-    color: var(--text-primary);
-  }
-  .summary-card.highlight .value {
-    color: var(--accent);
-  }
-  .summary-card .sub {
-    font-size: 10px;
-    color: var(--text-muted);
-    margin-top: 3px;
-  }
+/* Loan Card */
+.loan-card {
+  background: var(--card);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+  margin-bottom: 14px;
+  overflow: hidden;
+}
+.loan-header {
+  padding: 16px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  cursor: pointer;
+}
+.loan-title { font-weight: 600; font-size: 15px; }
+.loan-subtitle { font-size: 13px; color: var(--text-secondary); margin-top: 2px; }
+.loan-amount { font-weight: 700; font-size: 15px; color: var(--primary); text-align: right; }
+.loan-remaining { font-size: 12px; color: var(--text-secondary); }
 
-  /* ── Next Payment Alert ── */
-  .next-payment {
-    background: var(--bg-card);
-    border: 1px solid var(--border);
-    border-radius: var(--radius);
-    padding: 16px;
-    margin-bottom: 24px;
-    display: flex;
-    align-items: center;
-    gap: 14px;
-    position: relative;
-    overflow: hidden;
-  }
-  .next-payment::before {
-    content: '';
-    position: absolute;
-    left: 0; top: 0; bottom: 0;
-    width: 3px;
-    background: var(--accent);
-    border-radius: 0 2px 2px 0;
-  }
-  .next-payment.overdue::before { background: var(--danger); }
-  .next-payment .np-icon {
-    width: 44px; height: 44px;
-    border-radius: 12px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-size: 20px;
-    flex-shrink: 0;
-  }
-  .next-payment .np-icon.upcoming { background: var(--accent-dim); }
-  .next-payment .np-icon.overdue { background: var(--danger-dim); }
-  .next-payment .np-info { flex: 1; min-width: 0; }
-  .next-payment .np-title {
-    font-size: 11px;
-    text-transform: uppercase;
-    letter-spacing: 0.8px;
-    color: var(--text-muted);
-    font-weight: 600;
-  }
-  .next-payment .np-creditor {
-    font-size: 15px;
-    font-weight: 600;
-    margin-top: 2px;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-  }
-  .next-payment .np-detail {
-    font-size: 12px;
-    color: var(--text-secondary);
-    margin-top: 2px;
-  }
-  .next-payment .np-amount {
-    font-family: 'JetBrains Mono', monospace;
-    font-size: 16px;
-    font-weight: 600;
-    color: var(--accent);
-    flex-shrink: 0;
-  }
-  .next-payment.overdue .np-amount { color: var(--danger); }
+/* Tabs */
+.tabs {
+  display: flex;
+  border-bottom: 2px solid var(--border);
+  background: var(--card);
+  position: sticky;
+  top: 0;
+  z-index: 50;
+}
+.tab {
+  flex: 1;
+  padding: 12px 8px;
+  text-align: center;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text-secondary);
+  background: none;
+  border: none;
+  cursor: pointer;
+  position: relative;
+  transition: color 0.2s;
+}
+.tab.active { color: var(--primary); }
+.tab.active::after {
+  content: '';
+  position: absolute;
+  bottom: -2px; left: 0; right: 0;
+  height: 3px;
+  background: var(--primary);
+  border-radius: 3px 3px 0 0;
+}
 
-  /* ── Section Header ── */
-  .section-header {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    margin-bottom: 14px;
-    padding: 0 2px;
-  }
-  .section-header h2 {
-    font-size: 17px;
-    font-weight: 600;
-    letter-spacing: -0.3px;
-  }
-  .section-header .count {
-    font-size: 12px;
-    color: var(--text-muted);
-    background: var(--bg-elevated);
-    padding: 3px 10px;
-    border-radius: 20px;
-    font-weight: 500;
-  }
+/* Progress Bar */
+.progress-container { padding: 16px; }
+.progress-bar {
+  height: 8px;
+  background: #e0e0e0;
+  border-radius: 4px;
+  overflow: hidden;
+  margin-bottom: 6px;
+}
+.progress-fill {
+  height: 100%;
+  background: linear-gradient(90deg, var(--accent), #66bb6a);
+  border-radius: 4px;
+  transition: width 0.5s ease;
+}
+.progress-label { font-size: 13px; color: var(--text-secondary); font-weight: 500; }
 
-  /* ── Creditor Tile ── */
-  .creditor-tile {
-    background: var(--bg-card);
-    border: 1px solid var(--border);
-    border-radius: var(--radius);
-    margin-bottom: 12px;
-    overflow: hidden;
-    transition: all 0.3s ease;
-    animation: fadeUp 0.4s ease both;
-  }
-  .creditor-tile.overdue { border-color: rgba(255,71,87,0.2); }
-  .creditor-tile.due-soon { border-color: rgba(255,165,2,0.2); }
+/* Schedule Items */
+.schedule-list { padding: 0 16px 16px; }
+.schedule-item {
+  display: flex;
+  align-items: center;
+  padding: 14px 16px;
+  background: #f8f9fb;
+  border-radius: 12px;
+  margin-bottom: 8px;
+  cursor: pointer;
+  transition: all 0.2s;
+  border: 2px solid transparent;
+}
+.schedule-item:active { transform: scale(0.98); }
+.schedule-item.paid { border-color: var(--accent); background: #f0fdf4; }
+.schedule-item.overdue { border-color: var(--accent-red); background: #fef2f2; }
+.schedule-date { font-size: 14px; font-weight: 500; min-width: 110px; }
+.schedule-amount { font-size: 14px; font-weight: 600; flex: 1; text-align: center; }
+.schedule-status { font-size: 13px; font-weight: 600; min-width: 60px; text-align: right; }
+.schedule-status.paid { color: var(--accent); }
+.schedule-status.unpaid { color: var(--text-secondary); }
+.schedule-status.overdue { color: var(--accent-red); }
+.schedule-check {
+  width: 26px; height: 26px;
+  border-radius: 50%;
+  border: 2px solid #d1d5db;
+  display: flex; align-items: center; justify-content: center;
+  margin-left: 10px;
+  flex-shrink: 0;
+  transition: all 0.2s;
+}
+.schedule-item.paid .schedule-check {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: white;
+}
+.checkmark { font-size: 14px; font-weight: 700; }
 
-  @keyframes fadeUp {
-    from { opacity: 0; transform: translateY(12px); }
-    to { opacity: 1; transform: translateY(0); }
-  }
+/* Loan Details */
+.detail-section {
+  background: var(--card);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+  padding: 20px;
+  margin-bottom: 14px;
+}
+.detail-section h3 {
+  font-size: 16px;
+  font-weight: 700;
+  margin-bottom: 16px;
+  color: var(--primary);
+}
+.detail-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 10px 0;
+  border-bottom: 1px solid var(--border);
+}
+.detail-row:last-child { border-bottom: none; }
+.detail-label { font-size: 13px; color: var(--text-secondary); }
+.detail-value { font-size: 14px; font-weight: 600; text-align: right; }
 
-  .tile-header {
-    padding: 16px;
-    cursor: pointer;
-    display: flex;
-    align-items: center;
-    gap: 12px;
-    -webkit-user-select: none;
-    user-select: none;
-  }
-  .tile-header:active { background: var(--bg-card-hover); }
+/* Forms */
+.form-group { margin-bottom: 16px; }
+.form-label {
+  display: block;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-secondary);
+  margin-bottom: 6px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+.form-input {
+  width: 100%;
+  padding: 12px 14px;
+  border: 2px solid var(--border);
+  border-radius: 10px;
+  font-size: 16px;
+  font-family: inherit;
+  background: #f8f9fb;
+  color: var(--text);
+  transition: border-color 0.2s;
+  -webkit-appearance: none;
+}
+.form-input:focus { outline: none; border-color: var(--primary); background: white; }
+select.form-input { background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath d='M6 8L1 3h10z' fill='%236b7280'/%3E%3C/svg%3E"); background-repeat: no-repeat; background-position: right 12px center; }
 
-  .tile-icon {
-    width: 44px; height: 44px;
-    border-radius: 12px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-size: 20px;
-    flex-shrink: 0;
-    font-weight: 700;
-  }
+/* Buttons */
+.btn {
+  width: 100%;
+  padding: 14px;
+  border: none;
+  border-radius: 12px;
+  font-size: 16px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.2s;
+  font-family: inherit;
+}
+.btn:active { transform: scale(0.97); }
+.btn-primary { background: var(--primary); color: white; }
+.btn-danger { background: var(--accent-red); color: white; }
+.btn-outline { background: none; border: 2px solid var(--border); color: var(--text); }
+.btn-sm { padding: 10px 16px; font-size: 14px; width: auto; border-radius: 10px; }
+.btn-row { display: flex; gap: 10px; margin-top: 16px; }
+.btn-row .btn { flex: 1; }
 
-  .tile-info { flex: 1; min-width: 0; }
-  .tile-name {
-    font-size: 15px;
-    font-weight: 600;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-  }
-  .tile-account {
-    font-family: 'JetBrains Mono', monospace;
-    font-size: 11px;
-    color: var(--text-muted);
-    margin-top: 2px;
-  }
-  .tile-meta {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    margin-top: 6px;
-  }
-  .tile-badge {
-    font-size: 10px;
-    font-weight: 600;
-    padding: 2px 8px;
-    border-radius: 20px;
-    text-transform: uppercase;
-    letter-spacing: 0.5px;
-  }
-  .badge-overdue {
-    background: var(--danger-dim);
-    color: var(--danger);
-  }
-  .badge-due-soon {
-    background: var(--warning-dim);
-    color: var(--warning);
-  }
-  .badge-ok {
-    background: var(--success-dim);
-    color: var(--success);
-  }
-  .badge-paid {
-    background: var(--blue-dim);
-    color: var(--blue);
-  }
+/* Empty State */
+.empty-state {
+  text-align: center;
+  padding: 60px 20px;
+  color: var(--text-secondary);
+}
+.empty-state .icon { font-size: 48px; margin-bottom: 12px; opacity: 0.5; }
+.empty-state p { font-size: 15px; line-height: 1.5; }
 
-  .tile-right {
-    text-align: right;
-    flex-shrink: 0;
-  }
-  .tile-total {
-    font-family: 'JetBrains Mono', monospace;
-    font-size: 16px;
-    font-weight: 600;
-  }
-  .tile-total-label {
-    font-size: 10px;
-    color: var(--text-muted);
-    margin-top: 2px;
-  }
-  .tile-chevron {
-    color: var(--text-muted);
-    font-size: 14px;
-    transition: transform 0.3s ease;
-    margin-left: 4px;
-  }
-  .creditor-tile.expanded .tile-chevron {
-    transform: rotate(180deg);
-  }
+/* Modal / Overlay */
+.modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.5);
+  z-index: 200;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.25s;
+}
+.modal-overlay.show { opacity: 1; pointer-events: auto; }
+.modal {
+  background: var(--card);
+  border-radius: 20px 20px 0 0;
+  width: 100%;
+  max-width: 500px;
+  max-height: 85vh;
+  overflow-y: auto;
+  padding: 24px 20px calc(var(--safe-bottom) + 24px);
+  transform: translateY(100%);
+  transition: transform 0.3s ease;
+}
+.modal-overlay.show .modal { transform: translateY(0); }
+.modal-handle {
+  width: 36px; height: 4px;
+  background: #d1d5db;
+  border-radius: 2px;
+  margin: 0 auto 16px;
+}
+.modal h2 { font-size: 18px; font-weight: 700; margin-bottom: 20px; }
 
-  /* ── Amortization Breakdown Strip ── */
-  .amort-strip {
-    padding: 0 16px 14px;
-    border-bottom: 1px solid var(--border);
-  }
-  .amort-row {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    padding: 4px 0;
-  }
-  .amort-row .ar-label {
-    font-size: 12px;
-    color: var(--text-muted);
-    display: flex;
-    align-items: center;
-    gap: 6px;
-  }
-  .amort-row .ar-dot {
-    width: 6px; height: 6px;
-    border-radius: 50%;
-    flex-shrink: 0;
-  }
-  .amort-row .ar-amount {
-    font-family: 'JetBrains Mono', monospace;
-    font-size: 12px;
-    font-weight: 500;
-    color: var(--text-secondary);
-  }
-  .amort-divider {
-    height: 1px;
-    background: var(--border);
-    margin: 6px 0;
-  }
-  .amort-total {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    padding: 4px 0 0;
-  }
-  .amort-total .at-label {
-    font-size: 12px;
-    font-weight: 600;
-    color: var(--text-secondary);
-  }
-  .amort-total .at-value {
-    font-family: 'JetBrains Mono', monospace;
-    font-size: 15px;
-    font-weight: 700;
-    color: var(--accent);
-  }
+/* Confirm Dialog */
+.confirm-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.5);
+  z-index: 300;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.2s;
+}
+.confirm-overlay.show { opacity: 1; pointer-events: auto; }
+.confirm-box {
+  background: var(--card);
+  border-radius: 16px;
+  padding: 24px;
+  max-width: 320px;
+  width: 100%;
+  text-align: center;
+}
+.confirm-box p { font-size: 15px; margin-bottom: 20px; line-height: 1.4; }
 
-  /* ── Loan Cards inside tile ── */
-  .tile-body {
-    max-height: 0;
-    overflow: hidden;
-    transition: max-height 0.4s cubic-bezier(0.4, 0, 0.2, 1);
-  }
-  .creditor-tile.expanded .tile-body {
-    max-height: 2000px;
-  }
+/* Summary bar */
+.summary-bar {
+  background: var(--card);
+  padding: 14px 16px;
+  display: flex;
+  justify-content: space-around;
+  border-bottom: 1px solid var(--border);
+}
+.summary-item { text-align: center; }
+.summary-value { font-size: 18px; font-weight: 700; color: var(--primary); }
+.summary-label { font-size: 11px; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 0.5px; margin-top: 2px; }
 
-  .loan-card {
-    margin: 0 12px 12px;
-    background: var(--bg-elevated);
-    border-radius: var(--radius-sm);
-    padding: 14px;
-    border: 1px solid var(--border);
-  }
-  .loan-card:first-child { margin-top: 4px; }
+/* Transition pages */
+.page { display: none; position: relative; }
+.page.active { display: block; }
+.page:not(.active) .fab { pointer-events: none; display: none; }
 
-  .loan-card-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: flex-start;
-    margin-bottom: 12px;
-  }
-  .loan-label {
-    font-size: 12px;
-    color: var(--text-secondary);
-    font-weight: 500;
-  }
-  .loan-principal {
-    font-family: 'JetBrains Mono', monospace;
-    font-size: 15px;
-    font-weight: 600;
-    margin-top: 2px;
-  }
-  .loan-due-badge {
-    font-size: 10px;
-    font-weight: 600;
-    padding: 3px 8px;
-    border-radius: 6px;
-  }
+/* Edit icon button */
+.edit-btn {
+  background: none;
+  border: none;
+  color: var(--primary-light);
+  font-size: 14px;
+  cursor: pointer;
+  padding: 4px 8px;
+  border-radius: 8px;
+}
 
-  .loan-grid {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 8px;
-    margin-bottom: 12px;
-  }
-  .loan-field .f-label {
-    font-size: 10px;
-    text-transform: uppercase;
-    letter-spacing: 0.6px;
-    color: var(--text-muted);
-    font-weight: 600;
-    margin-bottom: 2px;
-  }
-  .loan-field .f-value {
-    font-size: 13px;
-    font-weight: 500;
-    color: var(--text-secondary);
-  }
-  .loan-field .f-value.mono {
-    font-family: 'JetBrains Mono', monospace;
-    font-size: 12px;
-  }
+/* Delete zone */
+.delete-zone { margin-top: 30px; padding-top: 20px; border-top: 1px solid var(--border); }
 
-  /* Progress bar */
-  .loan-progress {
-    margin-top: 2px;
-  }
-  .progress-header {
-    display: flex;
-    justify-content: space-between;
-    font-size: 11px;
-    margin-bottom: 6px;
-  }
-  .progress-header .p-label { color: var(--text-muted); }
-  .progress-header .p-value { 
-    font-family: 'JetBrains Mono', monospace;
-    color: var(--text-secondary);
-    font-weight: 500;
-  }
-  .progress-bar {
-    width: 100%;
-    height: 6px;
-    background: rgba(255,255,255,0.06);
-    border-radius: 3px;
-    overflow: hidden;
-  }
-  .progress-fill {
-    height: 100%;
-    border-radius: 3px;
-    transition: width 0.6s cubic-bezier(0.4, 0, 0.2, 1);
-    background: linear-gradient(90deg, var(--accent), #f0a500);
-  }
-  .progress-fill.danger {
-    background: linear-gradient(90deg, var(--danger), #ff6b81);
-  }
-  .progress-fill.complete {
-    background: linear-gradient(90deg, var(--success), #7bed9f);
-  }
+/* FAB */
+.fab {
+  position: fixed;
+  bottom: calc(var(--safe-bottom) + 20px);
+  right: 20px;
+  width: 56px; height: 56px;
+  border-radius: 50%;
+  background: var(--primary);
+  color: white;
+  border: none;
+  font-size: 28px;
+  box-shadow: 0 4px 16px rgba(26,58,107,0.35);
+  cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+  z-index: 90;
+  transition: transform 0.2s;
+}
+.fab:active { transform: scale(0.9); }
 
-  /* ── Tile summary footer ── */
-  .tile-footer {
-    padding: 12px 16px;
-    border-top: 1px solid var(--border);
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    font-size: 12px;
-  }
-  .tile-footer .tf-label { color: var(--text-muted); }
-  .tile-footer .tf-value {
-    font-family: 'JetBrains Mono', monospace;
-    font-weight: 600;
-    color: var(--accent);
-  }
+/* Currency formatting */
+.currency { font-feature-settings: 'tnum'; }
 
-  /* ── Bottom Nav ── */
-  .bottom-nav {
-    position: fixed;
-    bottom: 0; left: 0; right: 0;
-    background: rgba(10,10,15,0.92);
-    backdrop-filter: blur(20px);
-    -webkit-backdrop-filter: blur(20px);
-    border-top: 1px solid var(--border);
-    display: flex;
-    justify-content: space-around;
-    padding: 10px 0 calc(var(--safe-bottom) + 6px);
-    z-index: 100;
-  }
-  .nav-item {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    gap: 3px;
-    cursor: pointer;
-    padding: 4px 16px;
-    border: none;
-    background: none;
-    color: var(--text-muted);
-    font-size: 10px;
-    font-weight: 600;
-    letter-spacing: 0.3px;
-    font-family: 'DM Sans', sans-serif;
-    transition: color 0.2s;
-  }
-  .nav-item.active { color: var(--accent); }
-  .nav-item .nav-icon { font-size: 22px; }
-  .nav-item:active { transform: scale(0.9); }
-
-  /* ── Views ── */
-  .view { display: none; }
-  .view.active { display: block; }
-
-  /* ── Calendar View ── */
-  .calendar-month {
-    background: var(--bg-card);
-    border: 1px solid var(--border);
-    border-radius: var(--radius);
-    padding: 16px;
-    margin-bottom: 12px;
-  }
-  .cal-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    margin-bottom: 16px;
-  }
-  .cal-month-name {
-    font-size: 17px;
-    font-weight: 600;
-  }
-  .cal-nav { display: flex; gap: 8px; }
-  .cal-nav button {
-    width: 32px; height: 32px;
-    border-radius: 8px;
-    background: var(--bg-elevated);
-    border: 1px solid var(--border);
-    color: var(--text-secondary);
-    font-size: 14px;
-    cursor: pointer;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-  }
-  .cal-grid {
-    display: grid;
-    grid-template-columns: repeat(7, 1fr);
-    gap: 4px;
-    text-align: center;
-  }
-  .cal-day-label {
-    font-size: 10px;
-    font-weight: 600;
-    color: var(--text-muted);
-    padding: 4px 0;
-    text-transform: uppercase;
-    letter-spacing: 0.5px;
-  }
-  .cal-day {
-    aspect-ratio: 1;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    border-radius: 10px;
-    font-size: 13px;
-    font-weight: 500;
-    color: var(--text-secondary);
-    position: relative;
-    cursor: default;
-  }
-  .cal-day.empty { visibility: hidden; }
-  .cal-day.today {
-    background: var(--accent-dim);
-    color: var(--accent);
-    font-weight: 700;
-  }
-  .cal-day.has-due {
-    background: var(--bg-elevated);
-    cursor: pointer;
-  }
-  .cal-day.has-due::after {
-    content: '';
-    width: 4px; height: 4px;
-    border-radius: 50%;
-    background: var(--accent);
-    position: absolute;
-    bottom: 4px;
-  }
-  .cal-day.has-overdue::after { background: var(--danger); }
-
-  .cal-events {
-    margin-top: 12px;
-  }
-  .cal-event {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    padding: 10px 12px;
-    background: var(--bg-elevated);
-    border-radius: var(--radius-xs);
-    margin-bottom: 6px;
-  }
-  .cal-event-dot {
-    width: 8px; height: 8px;
-    border-radius: 50%;
-    flex-shrink: 0;
-  }
-  .cal-event-info { flex: 1; }
-  .cal-event-name {
-    font-size: 13px;
-    font-weight: 500;
-  }
-  .cal-event-sub {
-    font-size: 11px;
-    color: var(--text-muted);
-  }
-  .cal-event-amount {
-    font-family: 'JetBrains Mono', monospace;
-    font-size: 13px;
-    font-weight: 600;
-  }
-
-  /* ── Stats View ── */
-  .stat-section {
-    margin-bottom: 20px;
-  }
-  .stat-section h3 {
-    font-size: 14px;
-    font-weight: 600;
-    color: var(--text-secondary);
-    margin-bottom: 12px;
-    padding: 0 2px;
-  }
-  .stat-bar-row {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    margin-bottom: 10px;
-  }
-  .stat-bar-label {
-    font-size: 12px;
-    color: var(--text-secondary);
-    width: 100px;
-    flex-shrink: 0;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-  }
-  .stat-bar-track {
-    flex: 1;
-    height: 8px;
-    background: rgba(255,255,255,0.04);
-    border-radius: 4px;
-    overflow: hidden;
-  }
-  .stat-bar-fill {
-    height: 100%;
-    border-radius: 4px;
-    transition: width 0.8s ease;
-  }
-  .stat-bar-value {
-    font-family: 'JetBrains Mono', monospace;
-    font-size: 12px;
-    font-weight: 600;
-    width: 80px;
-    text-align: right;
-    flex-shrink: 0;
-  }
-  .stat-card {
-    background: var(--bg-card);
-    border: 1px solid var(--border);
-    border-radius: var(--radius);
-    padding: 16px;
-    margin-bottom: 10px;
-  }
-  .stat-card .sc-row {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    padding: 8px 0;
-  }
-  .stat-card .sc-row:not(:last-child) {
-    border-bottom: 1px solid var(--border);
-  }
-  .stat-card .sc-label {
-    font-size: 13px;
-    color: var(--text-secondary);
-  }
-  .stat-card .sc-value {
-    font-family: 'JetBrains Mono', monospace;
-    font-size: 14px;
-    font-weight: 600;
-  }
-
-  /* ── Settings View ── */
-  .settings-group {
-    background: var(--bg-card);
-    border: 1px solid var(--border);
-    border-radius: var(--radius);
-    overflow: hidden;
-    margin-bottom: 16px;
-  }
-  .settings-item {
-    padding: 14px 16px;
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    cursor: pointer;
-    transition: background 0.15s;
-  }
-  .settings-item:active { background: var(--bg-card-hover); }
-  .settings-item:not(:last-child) { border-bottom: 1px solid var(--border); }
-  .settings-item .si-left {
-    display: flex;
-    align-items: center;
-    gap: 12px;
-  }
-  .settings-item .si-icon {
-    font-size: 18px;
-    width: 32px;
-    text-align: center;
-  }
-  .settings-item .si-label {
-    font-size: 14px;
-    font-weight: 500;
-  }
-  .settings-item .si-arrow {
-    color: var(--text-muted);
-    font-size: 14px;
-  }
-  .settings-note {
-    font-size: 12px;
-    color: var(--text-muted);
-    padding: 8px 16px 0;
-    line-height: 1.5;
-  }
-
-  /* ── Modal ── */
-  .modal-overlay {
-    position: fixed;
-    inset: 0;
-    background: rgba(0,0,0,0.7);
-    backdrop-filter: blur(8px);
-    -webkit-backdrop-filter: blur(8px);
-    z-index: 200;
-    display: none;
-    align-items: flex-end;
-    justify-content: center;
-  }
-  .modal-overlay.show {
-    display: flex;
-    animation: fadeIn 0.2s ease;
-  }
-  .modal {
-    background: var(--bg-card);
-    border-radius: 20px 20px 0 0;
-    width: 100%;
-    max-width: 500px;
-    max-height: 85vh;
-    overflow-y: auto;
-    padding: 20px 16px calc(var(--safe-bottom) + 16px);
-    animation: slideUp 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-  }
-  @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
-  @keyframes slideUp { from { transform: translateY(100%); } to { transform: translateY(0); } }
-
-  .modal-handle {
-    width: 36px; height: 4px;
-    background: rgba(255,255,255,0.15);
-    border-radius: 2px;
-    margin: 0 auto 16px;
-  }
-  .modal h3 {
-    font-size: 18px;
-    font-weight: 600;
-    margin-bottom: 16px;
-  }
-
-  /* ── Edit/Add Form ── */
-  .form-group {
-    margin-bottom: 14px;
-  }
-  .form-group label {
-    display: block;
-    font-size: 11px;
-    text-transform: uppercase;
-    letter-spacing: 0.8px;
-    color: var(--text-muted);
-    font-weight: 600;
-    margin-bottom: 6px;
-  }
-  .form-group input, .form-group select {
-    width: 100%;
-    padding: 12px 14px;
-    background: var(--bg-elevated);
-    border: 1px solid var(--border);
-    border-radius: var(--radius-xs);
-    color: var(--text-primary);
-    font-size: 14px;
-    font-family: 'DM Sans', sans-serif;
-    outline: none;
-    transition: border-color 0.2s;
-  }
-  .form-group input:focus, .form-group select:focus {
-    border-color: var(--accent);
-  }
-  .form-row {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 10px;
-  }
-  .btn {
-    width: 100%;
-    padding: 14px;
-    border: none;
-    border-radius: var(--radius-sm);
-    font-size: 15px;
-    font-weight: 600;
-    font-family: 'DM Sans', sans-serif;
-    cursor: pointer;
-    transition: all 0.2s;
-  }
-  .btn:active { transform: scale(0.97); }
-  .btn-primary {
-    background: var(--accent);
-    color: #000;
-  }
-  .btn-secondary {
-    background: var(--bg-elevated);
-    color: var(--text-secondary);
-    border: 1px solid var(--border);
-    margin-top: 8px;
-  }
-  .btn-danger {
-    background: var(--danger-dim);
-    color: var(--danger);
-    margin-top: 8px;
-  }
-
-  /* ── Toast ── */
-  .toast {
-    position: fixed;
-    top: calc(var(--safe-top) + 12px);
-    left: 50%;
-    transform: translateX(-50%) translateY(-100px);
-    background: var(--bg-elevated);
-    border: 1px solid var(--border);
-    padding: 12px 20px;
-    border-radius: 12px;
-    font-size: 14px;
-    font-weight: 500;
-    z-index: 300;
-    transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-    pointer-events: none;
-  }
-  .toast.show {
-    transform: translateX(-50%) translateY(0);
-  }
-
-  /* ── Utility ── */
-  .text-danger { color: var(--danger) !important; }
-  .text-warning { color: var(--warning) !important; }
-  .text-success { color: var(--success) !important; }
-  .text-accent { color: var(--accent) !important; }
-  .text-muted { color: var(--text-muted) !important; }
-  .mt-8 { margin-top: 8px; }
-  .mb-16 { margin-bottom: 16px; }
-  .hidden { display: none !important; }
-
-  /* Scrollbar */
-  ::-webkit-scrollbar { width: 0; }
+/* Animations */
+@keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+.animate-in { animation: fadeIn 0.3s ease; }
 </style>
 </head>
 <body>
 
-<div class="app">
-  <!-- ═══════ HOME VIEW ═══════ -->
-  <div id="view-home" class="view active">
-    <div class="header">
-      <div class="header-left">
-        <h1>LoanPilot</h1>
-        <p id="header-date"></p>
-      </div>
-      <div class="header-actions">
-        <button class="header-btn" onclick="openAddCreditor()" title="Add Creditor">＋</button>
-      </div>
+<!-- ============ PAGE: Creditor List ============ -->
+<div id="page-creditors" class="page active">
+  <div class="header">
+    <h1>LoanPilot</h1>
+    <div class="header-actions">
+      <button class="header-btn" onclick="exportData()" title="Export">&#8681;</button>
+      <button class="header-btn" onclick="showImportModal()" title="Import">&#8679;</button>
     </div>
-
-    <div class="summary-strip" id="summary-strip"></div>
-    <div id="next-payment-container"></div>
-
-    <div class="section-header">
-      <h2>Creditors</h2>
-      <span class="count" id="creditor-count"></span>
-    </div>
-
-    <div id="creditor-list"></div>
   </div>
-
-  <!-- ═══════ CALENDAR VIEW ═══════ -->
-  <div id="view-calendar" class="view">
-    <div class="header">
-      <div class="header-left">
-        <h1>Calendar</h1>
-        <p>Payment schedule</p>
-      </div>
+  <div id="creditors-summary" class="summary-bar" style="display:none;">
+    <div class="summary-item">
+      <div class="summary-value currency" id="total-loans">0</div>
+      <div class="summary-label">Total Loans</div>
     </div>
-    <div id="calendar-container"></div>
+    <div class="summary-item">
+      <div class="summary-value currency" id="total-remaining">0</div>
+      <div class="summary-label">Remaining</div>
+    </div>
+    <div class="summary-item">
+      <div class="summary-value currency" id="total-paid-pct">0%</div>
+      <div class="summary-label">Paid</div>
+    </div>
   </div>
+  <div class="content" id="creditor-list"></div>
+  <button class="fab" onclick="showAddCreditorModal()">+</button>
+</div>
 
-  <!-- ═══════ STATS VIEW ═══════ -->
-  <div id="view-stats" class="view">
-    <div class="header">
-      <div class="header-left">
-        <h1>Insights</h1>
-        <p>Portfolio analysis</p>
-      </div>
+<!-- ============ PAGE: Creditor Detail (Loans List) ============ -->
+<div id="page-loans" class="page">
+  <div class="header">
+    <button class="back-btn" onclick="goToCreditors()">&larr;</button>
+    <h1 id="loans-title">Creditor</h1>
+    <div class="header-actions">
+      <button class="header-btn" onclick="showEditCreditorModal()" title="Edit">&#9998;</button>
     </div>
-    <div id="stats-container"></div>
   </div>
+  <div class="content" id="loans-list"></div>
+  <button class="fab" onclick="showAddLoanModal()">+</button>
+</div>
 
-  <!-- ═══════ SETTINGS VIEW ═══════ -->
-  <div id="view-settings" class="view">
-    <div class="header">
-      <div class="header-left">
-        <h1>Settings</h1>
-        <p>Manage your data</p>
-      </div>
+<!-- ============ PAGE: Loan Detail (Schedule) ============ -->
+<div id="page-schedule" class="page">
+  <div class="header">
+    <button class="back-btn" onclick="goToLoans()">&larr;</button>
+    <h1 id="schedule-title">Loan</h1>
+    <div class="header-actions">
+      <button class="header-btn" onclick="showEditLoanModal()" title="Edit">&#9998;</button>
     </div>
-    <div class="settings-group">
-      <div class="settings-item" onclick="exportData()">
-        <div class="si-left"><span class="si-icon">📤</span><span class="si-label">Export Data (JSON)</span></div>
-        <span class="si-arrow">›</span>
-      </div>
-      <div class="settings-item" onclick="document.getElementById('import-input').click()">
-        <div class="si-left"><span class="si-icon">📥</span><span class="si-label">Import Data</span></div>
-        <span class="si-arrow">›</span>
-      </div>
-      <input type="file" id="import-input" accept=".json" style="display:none" onchange="importData(event)">
-      <div class="settings-item" onclick="confirmReset()">
-        <div class="si-left"><span class="si-icon">🗑️</span><span class="si-label text-danger">Reset All Data</span></div>
-        <span class="si-arrow">›</span>
-      </div>
-    </div>
-    <p class="settings-note">All data is stored locally on your device. Export regularly to keep a backup. No data is sent to any server.</p>
+  </div>
+  <div class="tabs">
+    <button class="tab active" onclick="switchTab(this, 'schedule')">Schedule</button>
+    <button class="tab" onclick="switchTab(this, 'details')">Details</button>
+  </div>
+  <div id="tab-schedule" class="tab-content">
+    <div id="schedule-progress" class="progress-container"></div>
+    <div class="schedule-list" id="schedule-list"></div>
+  </div>
+  <div id="tab-details" class="tab-content" style="display:none;">
+    <div class="content" id="loan-details"></div>
   </div>
 </div>
 
-<!-- ═══════ BOTTOM NAV ═══════ -->
-<nav class="bottom-nav">
-  <button class="nav-item active" data-view="home">
-    <span class="nav-icon">🏠</span>
-    Home
-  </button>
-  <button class="nav-item" data-view="calendar">
-    <span class="nav-icon">📅</span>
-    Calendar
-  </button>
-  <button class="nav-item" data-view="stats">
-    <span class="nav-icon">📊</span>
-    Insights
-  </button>
-  <button class="nav-item" data-view="settings">
-    <span class="nav-icon">⚙️</span>
-    Settings
-  </button>
-</nav>
+<!-- ============ MODALS ============ -->
 
-<!-- ═══════ MODALS ═══════ -->
-<div class="modal-overlay" id="modal-overlay">
-  <div class="modal" id="modal-content"></div>
+<!-- Add/Edit Creditor Modal -->
+<div class="modal-overlay" id="creditor-modal">
+  <div class="modal">
+    <div class="modal-handle"></div>
+    <h2 id="creditor-modal-title">Add Creditor</h2>
+    <div class="form-group">
+      <label class="form-label">Creditor Name</label>
+      <input type="text" class="form-input" id="creditor-name" placeholder="e.g. BDO, BPI, Home Credit">
+    </div>
+    <div class="form-group">
+      <label class="form-label">Type</label>
+      <select class="form-input" id="creditor-type">
+        <option value="Bank">Bank</option>
+        <option value="Lending Company">Lending Company</option>
+        <option value="Government">Government (SSS, Pag-IBIG)</option>
+        <option value="Cooperative">Cooperative</option>
+        <option value="Other">Other</option>
+      </select>
+    </div>
+    <div class="form-group">
+      <label class="form-label">Notes (optional)</label>
+      <input type="text" class="form-input" id="creditor-notes" placeholder="Account number, branch, etc.">
+    </div>
+    <button class="btn btn-primary" id="creditor-save-btn" onclick="saveCreditor()">Add Creditor</button>
+    <div id="creditor-delete-zone" class="delete-zone" style="display:none;">
+      <button class="btn btn-danger" onclick="deleteCreditor()">Delete Creditor</button>
+    </div>
+  </div>
 </div>
 
-<div class="toast" id="toast"></div>
+<!-- Add/Edit Loan Modal -->
+<div class="modal-overlay" id="loan-modal">
+  <div class="modal">
+    <div class="modal-handle"></div>
+    <h2 id="loan-modal-title">Add Loan</h2>
+    <div class="form-group">
+      <label class="form-label">Loan Label</label>
+      <input type="text" class="form-input" id="loan-label" placeholder="e.g. Personal Loan, Housing Loan">
+    </div>
+    <div class="form-group">
+      <label class="form-label">Principal Loan Amount</label>
+      <input type="number" class="form-input" id="loan-principal" placeholder="0.00" step="0.01">
+    </div>
+    <div class="form-group">
+      <label class="form-label">Total Loan Amount (with interest)</label>
+      <input type="number" class="form-input" id="loan-total" placeholder="0.00" step="0.01">
+    </div>
+    <div class="form-group">
+      <label class="form-label">Monthly Amortization</label>
+      <input type="number" class="form-input" id="loan-amortization" placeholder="0.00" step="0.01">
+    </div>
+    <div class="form-group">
+      <label class="form-label">Availment Date</label>
+      <input type="date" class="form-input" id="loan-availment">
+    </div>
+    <div class="form-group">
+      <label class="form-label">Due Day of Month</label>
+      <input type="number" class="form-input" id="loan-due-day" placeholder="e.g. 15" min="1" max="31">
+    </div>
+    <div class="form-group">
+      <label class="form-label">Duration (months)</label>
+      <input type="number" class="form-input" id="loan-duration" placeholder="e.g. 12, 24, 36" min="1">
+    </div>
+    <div class="form-group">
+      <label class="form-label">End Date (auto-calculated or override)</label>
+      <input type="date" class="form-input" id="loan-end-date">
+    </div>
+    <button class="btn btn-primary" id="loan-save-btn" onclick="saveLoan()">Add Loan</button>
+    <div id="loan-delete-zone" class="delete-zone" style="display:none;">
+      <button class="btn btn-danger" onclick="deleteLoan()">Delete Loan</button>
+    </div>
+  </div>
+</div>
+
+<!-- Import Modal -->
+<div class="modal-overlay" id="import-modal">
+  <div class="modal">
+    <div class="modal-handle"></div>
+    <h2>Import Data</h2>
+    <p style="font-size:13px;color:var(--text-secondary);margin-bottom:16px;">Paste exported JSON data below to restore your loans.</p>
+    <div class="form-group">
+      <textarea class="form-input" id="import-data" rows="6" placeholder="Paste JSON here..."></textarea>
+    </div>
+    <button class="btn btn-primary" onclick="importData()">Import</button>
+  </div>
+</div>
+
+<!-- Confirm Dialog -->
+<div class="confirm-overlay" id="confirm-dialog">
+  <div class="confirm-box">
+    <p id="confirm-msg">Are you sure?</p>
+    <div class="btn-row">
+      <button class="btn btn-outline btn-sm" onclick="closeConfirm(false)">Cancel</button>
+      <button class="btn btn-danger btn-sm" onclick="closeConfirm(true)">Delete</button>
+    </div>
+  </div>
+</div>
 
 <script>
-// ═══════════════════════════════════════════════════
-// DATA LAYER
-// ═══════════════════════════════════════════════════
+// ========== DATA LAYER ==========
 const STORAGE_KEY = 'loanpilot_data';
-
-const DEFAULT_DATA = {
-  creditors: [
-    {
-      id: 'ewb',
-      name: 'East West Bank',
-      account: '5179-8882-2248-1006',
-      icon: '🏦',
-      color: '#f5c518',
-      loans: [
-        { id: 'ewb1', label: 'Loan 1', principal: 150000, availDate: '2024-10-28', endDate: '2026-06-28', duration: 18, dueDay: 28, monthly: 9233.33, totalMonths: 18, monthsPaid: 5 },
-        { id: 'ewb2', label: 'Loan 2', principal: 150000, availDate: '2025-10-21', endDate: '2027-04-28', duration: 18, dueDay: 28, monthly: 9833.33, totalMonths: 18, monthsPaid: 15 },
-        { id: 'ewb3', label: 'Loan 3', principal: 49990, availDate: '2026-03-25', endDate: '2027-03-28', duration: 24, dueDay: 28, monthly: 2082.92, totalMonths: 24, monthsPaid: 14 },
-      ]
-    },
-    {
-      id: 'ubp',
-      name: 'Union Bank',
-      account: '0211-0100-0030-1097',
-      icon: '🏛️',
-      color: '#3b82f6',
-      loans: [
-        { id: 'ubp1', label: 'Loan 1', principal: null, availDate: '2024-07-02', endDate: '2027-07-02', duration: 36, dueDay: 2, monthly: 9939.96, totalMonths: 36, monthsPaid: 18 },
-        { id: 'ubp2', label: 'Loan 2', principal: null, availDate: '2024-10-02', endDate: '2027-10-02', duration: 36, dueDay: 2, monthly: 3975.98, totalMonths: 36, monthsPaid: 21 },
-        { id: 'ubp3', label: 'Loan 3', principal: null, availDate: '2025-09-02', endDate: '2028-09-02', duration: 36, dueDay: 2, monthly: 11092.99, totalMonths: 36, monthsPaid: 32 },
-      ]
-    },
-    {
-      id: 'hc',
-      name: 'Home Credit',
-      account: '4509-5603-22 (Extreme)',
-      icon: '💳',
-      color: '#ff6348',
-      loans: [
-        { id: 'hc1', label: 'Extreme Loan', principal: 19095, availDate: '2025-12-12', endDate: '2026-12-12', duration: 12, dueDay: 12, monthly: 1689, totalMonths: 12, monthsPaid: 11 },
-      ]
-    },
-    {
-      id: 'tonik',
-      name: 'Tonik',
-      account: '6083-4215-0000-08 (Extreme)',
-      icon: '📱',
-      color: '#a55eea',
-      loans: [
-        { id: 'ton1', label: 'Extreme Loan', principal: 19770, availDate: '2025-05-05', endDate: '2026-05-10', duration: 12, dueDay: 10, monthly: 1762.83, totalMonths: 12, monthsPaid: 4 },
-      ]
-    },
-    {
-      id: 'cimb',
-      name: 'CIMB',
-      account: '',
-      icon: '🔴',
-      color: '#ff4757',
-      loans: [
-        { id: 'cimb1', label: 'Personal Loan', principal: 29013.94, availDate: '', endDate: '', duration: null, dueDay: 1, monthly: 0, totalMonths: 0, monthsPaid: 0 },
-      ]
-    },
-    {
-      id: 'bl',
-      name: 'Billease',
-      account: '',
-      icon: '📦',
-      color: '#2ed573',
-      loans: [
-        { id: 'bl1', label: 'Loan 1', principal: 5000, availDate: '2025-09-21', endDate: '2026-04-01', duration: 12, dueDay: 30, monthly: 520, totalMonths: 12, monthsPaid: 6 },
-        { id: 'bl2', label: 'Loan 2', principal: 15000, availDate: '2025-09-12', endDate: '2026-03-16', duration: 12, dueDay: 30, monthly: 1557, totalMonths: 12, monthsPaid: 5 },
-      ]
-    },
-  ]
-};
+let data = { creditors: [] };
+let currentCreditorId = null;
+let currentLoanId = null;
+let editingCreditorId = null;
+let editingLoanId = null;
+let confirmResolve = null;
 
 function loadData() {
   try {
     const raw = localStorage.getItem(STORAGE_KEY);
-    if (raw) return JSON.parse(raw);
-  } catch(e) {}
-  return null;
+    if (raw) data = JSON.parse(raw);
+  } catch(e) { console.error('Load error', e); }
+  if (!data.creditors) data.creditors = [];
 }
 
-function saveData(data) {
+function saveData() {
   localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
 }
 
-function initData() {
-  let data = loadData();
-  if (!data) {
-    data = DEFAULT_DATA;
-    saveData(data);
+function genId() { return Date.now().toString(36) + Math.random().toString(36).slice(2, 7); }
+
+function getCreditor(id) { return data.creditors.find(c => c.id === id); }
+function getLoan(creditorId, loanId) {
+  const c = getCreditor(creditorId);
+  return c ? c.loans.find(l => l.id === loanId) : null;
+}
+
+// ========== FORMATTING ==========
+function fmt(amount) {
+  return new Intl.NumberFormat('en-PH', { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(amount || 0);
+}
+function fmtDate(dateStr) {
+  if (!dateStr) return '-';
+  const d = new Date(dateStr + 'T00:00:00');
+  return d.toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: '2-digit' });
+}
+
+function getInitials(name) {
+  return name.split(/\s+/).map(w => w[0]).join('').toUpperCase().slice(0, 2);
+}
+
+// ========== NAVIGATION ==========
+function showPage(id) {
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+  window.scrollTo(0, 0);
+}
+
+function goToCreditors() {
+  currentCreditorId = null;
+  currentLoanId = null;
+  showPage('page-creditors');
+  renderCreditors();
+}
+
+function goToLoans() {
+  currentLoanId = null;
+  showPage('page-loans');
+  renderLoans();
+}
+
+function openCreditor(id) {
+  currentCreditorId = id;
+  showPage('page-loans');
+  renderLoans();
+}
+
+function openLoan(loanId) {
+  currentLoanId = loanId;
+  showPage('page-schedule');
+  renderSchedule();
+}
+
+// ========== RENDER: CREDITORS ==========
+function renderCreditors() {
+  const list = document.getElementById('creditor-list');
+  const summary = document.getElementById('creditors-summary');
+
+  if (data.creditors.length === 0) {
+    summary.style.display = 'none';
+    list.innerHTML = `<div class="empty-state animate-in">
+      <div class="icon">&#127974;</div>
+      <p>No creditors yet.<br>Tap + to add your first creditor.</p>
+    </div>`;
+    return;
   }
-  return data;
-}
-
-let appData = initData();
-
-// ═══════════════════════════════════════════════════
-// UTILITIES
-// ═══════════════════════════════════════════════════
-const today = new Date();
-today.setHours(0,0,0,0);
-
-function formatCurrency(n) {
-  if (n == null || isNaN(n)) return '₱0.00';
-  return '₱' + Number(n).toLocaleString('en-PH', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-}
-
-function formatDate(str) {
-  if (!str) return '—';
-  const d = new Date(str);
-  return d.toLocaleDateString('en-PH', { month: 'short', day: 'numeric', year: 'numeric' });
-}
-
-function getNextDueDate(dueDay) {
-  const now = new Date();
-  let due = new Date(now.getFullYear(), now.getMonth(), dueDay);
-  // If due day already passed this month and it's not today, next month
-  if (due < now && due.toDateString() !== now.toDateString()) {
-    due.setMonth(due.getMonth() + 1);
-  }
-  return due;
-}
-
-function getDaysUntilDue(dueDay) {
-  const next = getNextDueDate(dueDay);
-  const diff = Math.ceil((next - today) / (1000 * 60 * 60 * 24));
-  return diff;
-}
-
-function getDueStatus(dueDay, loan) {
-  // If fully paid
-  if (loan.totalMonths > 0 && loan.monthsPaid >= loan.totalMonths) return 'paid';
-  const days = getDaysUntilDue(dueDay);
-  if (days < 0) return 'overdue';
-  if (days === 0) return 'due-today';
-  if (days <= 5) return 'due-soon';
-  return 'ok';
-}
-
-function getDueStatusLabel(status) {
-  switch(status) {
-    case 'overdue': return { text: 'OVERDUE', cls: 'badge-overdue' };
-    case 'due-today': return { text: 'DUE TODAY', cls: 'badge-overdue' };
-    case 'due-soon': return { text: 'DUE SOON', cls: 'badge-due-soon' };
-    case 'paid': return { text: 'PAID OFF', cls: 'badge-paid' };
-    default: return { text: 'ON TRACK', cls: 'badge-ok' };
-  }
-}
-
-function getCreditorDueStatus(creditor) {
-  let worst = 'ok';
-  const priority = { 'paid': 0, 'ok': 1, 'due-soon': 2, 'due-today': 3, 'overdue': 4 };
-  creditor.loans.forEach(l => {
-    const s = getDueStatus(l.dueDay, l);
-    if (priority[s] > priority[worst]) worst = s;
-  });
-  return worst;
-}
-
-function getCreditorNextDueDate(creditor) {
-  let nearest = Infinity;
-  creditor.loans.forEach(l => {
-    if (l.totalMonths > 0 && l.monthsPaid >= l.totalMonths) return;
-    const days = getDaysUntilDue(l.dueDay);
-    if (days < nearest) nearest = days;
-  });
-  return nearest;
-}
-
-function sortCreditors(creditors) {
-  return [...creditors].sort((a, b) => {
-    const aDays = getCreditorNextDueDate(a);
-    const bDays = getCreditorNextDueDate(b);
-    return aDays - bDays;
-  });
-}
-
-function showToast(msg) {
-  const t = document.getElementById('toast');
-  t.textContent = msg;
-  t.classList.add('show');
-  setTimeout(() => t.classList.remove('show'), 2500);
-}
-
-// ═══════════════════════════════════════════════════
-// RENDER: HOME
-// ═══════════════════════════════════════════════════
-function renderHome() {
-  // Header date
-  document.getElementById('header-date').textContent = today.toLocaleDateString('en-PH', { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' });
 
   // Summary
-  let totalMonthly = 0, totalLoans = 0, activeCreditors = 0;
-  appData.creditors.forEach(c => {
-    let hasActive = false;
+  let totalLoans = 0, totalRemaining = 0, totalPaid = 0, totalInstallments = 0;
+  data.creditors.forEach(c => {
     c.loans.forEach(l => {
-      if (l.totalMonths > 0 && l.monthsPaid >= l.totalMonths) return;
-      totalMonthly += l.monthly || 0;
-      totalLoans++;
-      hasActive = true;
+      totalLoans += l.totalAmount || 0;
+      l.schedule.forEach(s => {
+        totalInstallments++;
+        if (s.paid) totalPaid++;
+        else totalRemaining += s.amount;
+      });
     });
-    if (hasActive) activeCreditors++;
   });
+  summary.style.display = 'flex';
+  document.getElementById('total-loans').textContent = data.creditors.reduce((s, c) => s + c.loans.length, 0);
+  document.getElementById('total-remaining').innerHTML = '&#8369;' + fmt(totalRemaining);
+  document.getElementById('total-paid-pct').textContent = totalInstallments > 0 ? Math.round(totalPaid / totalInstallments * 100) + '%' : '0%';
 
-  document.getElementById('summary-strip').innerHTML = `
-    <div class="summary-card highlight">
-      <div class="label">Monthly</div>
-      <div class="value">${formatCurrency(totalMonthly)}</div>
-      <div class="sub">total obligation</div>
-    </div>
-    <div class="summary-card">
-      <div class="label">Active</div>
-      <div class="value">${totalLoans}</div>
-      <div class="sub">loan${totalLoans !== 1 ? 's' : ''}</div>
-    </div>
-    <div class="summary-card">
-      <div class="label">Creditors</div>
-      <div class="value">${activeCreditors}</div>
-      <div class="sub">institution${activeCreditors !== 1 ? 's' : ''}</div>
-    </div>
-  `;
-
-  // Next payment — aggregate all loans per creditor+dueDay
-  const sorted = sortCreditors(appData.creditors);
-  const paymentGroups = [];
-  sorted.forEach(c => {
-    const dueDayMap = {};
-    c.loans.forEach(l => {
-      if (l.totalMonths > 0 && l.monthsPaid >= l.totalMonths) return;
-      if (!l.monthly) return;
-      const key = l.dueDay;
-      if (!dueDayMap[key]) dueDayMap[key] = { creditor: c.name, dueDay: l.dueDay, amount: 0, loans: [], days: getDaysUntilDue(l.dueDay) };
-      dueDayMap[key].amount += l.monthly;
-      dueDayMap[key].loans.push(l.label);
-    });
-    Object.values(dueDayMap).forEach(g => paymentGroups.push(g));
-  });
-  paymentGroups.sort((a, b) => a.days - b.days);
-  const nextPayment = paymentGroups.length > 0 ? paymentGroups[0] : null;
-
-  const npContainer = document.getElementById('next-payment-container');
-  if (nextPayment) {
-    const isOverdue = nextPayment.days < 0;
-    const isDueToday = nextPayment.days === 0;
-    let dueText = '';
-    if (isOverdue) dueText = `${Math.abs(nextPayment.days)} day${Math.abs(nextPayment.days)>1?'s':''} overdue`;
-    else if (isDueToday) dueText = 'Due today';
-    else dueText = `Due in ${nextPayment.days} day${nextPayment.days>1?'s':''}`;
-
-    const loanCount = nextPayment.loans.length;
-    const loanDetail = loanCount > 1 ? `${loanCount} loans` : nextPayment.loans[0];
-
-    npContainer.innerHTML = `
-      <div class="next-payment ${isOverdue ? 'overdue' : ''}">
-        <div class="np-icon ${isOverdue ? 'overdue' : 'upcoming'}">${isOverdue ? '⚠️' : '📌'}</div>
-        <div class="np-info">
-          <div class="np-title">${isOverdue ? 'Overdue Payment' : 'Next Payment'}</div>
-          <div class="np-creditor">${nextPayment.creditor}</div>
-          <div class="np-detail">${loanDetail} · ${dueText} · ${getOrdinal(nextPayment.dueDay)} of month</div>
+  list.innerHTML = data.creditors.map(c => {
+    const loanCount = c.loans.length;
+    const totalAmt = c.loans.reduce((s, l) => s + (l.totalAmount || 0), 0);
+    return `<div class="creditor-card animate-in" onclick="openCreditor('${c.id}')">
+      <div class="creditor-header">
+        <div class="creditor-avatar">${getInitials(c.name)}</div>
+        <div class="creditor-info">
+          <div class="creditor-name">${esc(c.name)}</div>
+          <div class="creditor-meta">${c.type} &middot; ${loanCount} loan${loanCount !== 1 ? 's' : ''}</div>
         </div>
-        <div class="np-amount">${formatCurrency(nextPayment.amount)}</div>
+        <div class="creditor-arrow">&#8250;</div>
       </div>
-    `;
+    </div>`;
+  }).join('');
+}
+
+// ========== RENDER: LOANS ==========
+function renderLoans() {
+  const creditor = getCreditor(currentCreditorId);
+  if (!creditor) return goToCreditors();
+
+  document.getElementById('loans-title').textContent = creditor.name;
+  const list = document.getElementById('loans-list');
+
+  if (creditor.loans.length === 0) {
+    list.innerHTML = `<div class="empty-state animate-in">
+      <div class="icon">&#128196;</div>
+      <p>No loans yet for ${esc(creditor.name)}.<br>Tap + to add a loan.</p>
+    </div>`;
+    return;
+  }
+
+  list.innerHTML = creditor.loans.map(l => {
+    const paid = l.schedule.filter(s => s.paid).length;
+    const total = l.schedule.length;
+    const pct = total > 0 ? Math.round(paid / total * 100) : 0;
+    const remaining = l.schedule.filter(s => !s.paid).reduce((s, i) => s + i.amount, 0);
+    return `<div class="loan-card animate-in" onclick="openLoan('${l.id}')">
+      <div class="loan-header">
+        <div>
+          <div class="loan-title">${esc(l.label)}</div>
+          <div class="loan-subtitle">&#8369;${fmt(l.amortization)} x ${total} &middot; ${paid}/${total} paid</div>
+        </div>
+        <div>
+          <div class="loan-amount">&#8369;${fmt(l.totalAmount)}</div>
+          <div class="loan-remaining">Remaining: &#8369;${fmt(remaining)}</div>
+        </div>
+      </div>
+      <div style="padding:0 16px 12px;">
+        <div class="progress-bar"><div class="progress-fill" style="width:${pct}%"></div></div>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+// ========== RENDER: SCHEDULE ==========
+function renderSchedule() {
+  const loan = getLoan(currentCreditorId, currentLoanId);
+  if (!loan) return goToLoans();
+
+  document.getElementById('schedule-title').textContent = loan.label;
+
+  // Progress
+  const paid = loan.schedule.filter(s => s.paid).length;
+  const total = loan.schedule.length;
+  const pct = total > 0 ? Math.round(paid / total * 100) : 0;
+  document.getElementById('schedule-progress').innerHTML = `
+    <div class="progress-bar"><div class="progress-fill" style="width:${pct}%"></div></div>
+    <div class="progress-label">Paid: <strong>${paid}/${total}</strong></div>`;
+
+  // Schedule list
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  const list = document.getElementById('schedule-list');
+  list.innerHTML = loan.schedule.map((s, i) => {
+    const dueDate = new Date(s.date + 'T00:00:00');
+    const isOverdue = !s.paid && dueDate < today;
+    const cls = s.paid ? 'paid' : (isOverdue ? 'overdue' : '');
+    const statusCls = s.paid ? 'paid' : (isOverdue ? 'overdue' : 'unpaid');
+    const statusText = s.paid ? 'Paid' : (isOverdue ? 'Overdue' : 'Unpaid');
+    return `<div class="schedule-item ${cls}" onclick="togglePaid(${i})">
+      <div class="schedule-date">${fmtDate(s.date)}</div>
+      <div class="schedule-amount currency">&#8369;${fmt(s.amount)}</div>
+      <div class="schedule-status ${statusCls}">${statusText}</div>
+      <div class="schedule-check">${s.paid ? '<span class="checkmark">&#10003;</span>' : ''}</div>
+    </div>`;
+  }).join('');
+
+  // Details tab
+  const creditor = getCreditor(currentCreditorId);
+  const remaining = loan.schedule.filter(s => !s.paid).reduce((s, i) => s + i.amount, 0);
+  document.getElementById('loan-details').innerHTML = `
+    <div class="detail-section">
+      <h3>Loan Information</h3>
+      <div class="detail-row"><span class="detail-label">Creditor</span><span class="detail-value">${esc(creditor.name)}</span></div>
+      <div class="detail-row"><span class="detail-label">Loan Label</span><span class="detail-value">${esc(loan.label)}</span></div>
+      <div class="detail-row"><span class="detail-label">Principal Amount</span><span class="detail-value currency">&#8369;${fmt(loan.principal)}</span></div>
+      <div class="detail-row"><span class="detail-label">Total Amount</span><span class="detail-value currency">&#8369;${fmt(loan.totalAmount)}</span></div>
+      <div class="detail-row"><span class="detail-label">Monthly Amortization</span><span class="detail-value currency">&#8369;${fmt(loan.amortization)}</span></div>
+      <div class="detail-row"><span class="detail-label">Availment Date</span><span class="detail-value">${fmtDate(loan.availmentDate)}</span></div>
+      <div class="detail-row"><span class="detail-label">End Date</span><span class="detail-value">${fmtDate(loan.endDate)}</span></div>
+      <div class="detail-row"><span class="detail-label">Duration</span><span class="detail-value">${loan.duration} months</span></div>
+      <div class="detail-row"><span class="detail-label">Due Day</span><span class="detail-value">${loan.dueDay} of each month</span></div>
+      <div class="detail-row"><span class="detail-label">Remaining Balance</span><span class="detail-value currency" style="color:var(--accent-red);">&#8369;${fmt(remaining)}</span></div>
+      <div class="detail-row"><span class="detail-label">Progress</span><span class="detail-value">${paid}/${total} (${pct}%)</span></div>
+    </div>`;
+}
+
+function togglePaid(index) {
+  const loan = getLoan(currentCreditorId, currentLoanId);
+  if (!loan) return;
+  loan.schedule[index].paid = !loan.schedule[index].paid;
+  if (loan.schedule[index].paid) {
+    loan.schedule[index].paidDate = new Date().toISOString().split('T')[0];
   } else {
-    npContainer.innerHTML = '';
+    delete loan.schedule[index].paidDate;
   }
-
-  // Creditor count
-  document.getElementById('creditor-count').textContent = `${appData.creditors.length} total`;
-
-  // Creditor list
-  const list = document.getElementById('creditor-list');
-  list.innerHTML = '';
-
-  sorted.forEach((c, ci) => {
-    const status = getCreditorDueStatus(c);
-    const statusInfo = getDueStatusLabel(status);
-    const totalMo = c.loans.reduce((s, l) => {
-      if (l.totalMonths > 0 && l.monthsPaid >= l.totalMonths) return s;
-      return s + (l.monthly || 0);
-    }, 0);
-    const tileClass = status === 'overdue' || status === 'due-today' ? 'overdue' : status === 'due-soon' ? 'due-soon' : '';
-
-    let loansHTML = '';
-    c.loans.forEach(l => {
-      const ls = getDueStatus(l.dueDay, l);
-      const lsi = getDueStatusLabel(ls);
-      const remaining = l.totalMonths - l.monthsPaid;
-      const pct = l.totalMonths > 0 ? Math.round((l.monthsPaid / l.totalMonths) * 100) : 0;
-      const progressCls = pct >= 100 ? 'complete' : pct > 75 ? '' : '';
-      const fillCls = ls === 'overdue' || ls === 'due-today' ? 'danger' : pct >= 100 ? 'complete' : '';
-
-      loansHTML += `
-        <div class="loan-card">
-          <div class="loan-card-header">
-            <div>
-              <div class="loan-label">${l.label}</div>
-              <div class="loan-principal">${l.principal ? formatCurrency(l.principal) : '—'}</div>
-            </div>
-            <span class="loan-due-badge ${lsi.cls}">${lsi.text}</span>
-          </div>
-          <div style="background:rgba(245,197,24,0.06);border:1px solid rgba(245,197,24,0.12);border-radius:8px;padding:10px 12px;margin-bottom:12px;display:flex;justify-content:space-between;align-items:center;">
-            <span style="font-size:11px;text-transform:uppercase;letter-spacing:0.8px;color:var(--text-muted);font-weight:600;">Monthly Amortization</span>
-            <span style="font-family:'JetBrains Mono',monospace;font-size:16px;font-weight:700;color:var(--accent);">${formatCurrency(l.monthly)}</span>
-          </div>
-          <div class="loan-grid">
-            <div class="loan-field">
-              <div class="f-label">Availment</div>
-              <div class="f-value">${formatDate(l.availDate)}</div>
-            </div>
-            <div class="loan-field">
-              <div class="f-label">End Date</div>
-              <div class="f-value">${formatDate(l.endDate)}</div>
-            </div>
-            <div class="loan-field">
-              <div class="f-label">Due Day</div>
-              <div class="f-value">${getOrdinal(l.dueDay)} of each month</div>
-            </div>
-            <div class="loan-field">
-              <div class="f-label">Duration</div>
-              <div class="f-value">${l.duration ? l.duration + ' months' : '—'}</div>
-            </div>
-            <div class="loan-field">
-              <div class="f-label">Months Remaining</div>
-              <div class="f-value ${remaining <= 3 && remaining > 0 ? 'text-success' : ''}">${l.totalMonths > 0 ? remaining + '/' + l.totalMonths + ' mos' : '—'}</div>
-            </div>
-            <div class="loan-field">
-              <div class="f-label">Months Paid</div>
-              <div class="f-value">${l.monthsPaid > 0 ? l.monthsPaid + ' mos' : '—'}</div>
-            </div>
-          </div>
-          ${l.totalMonths > 0 ? `
-          <div class="loan-progress">
-            <div class="progress-header">
-              <span class="p-label">Progress</span>
-              <span class="p-value">${pct}% complete</span>
-            </div>
-            <div class="progress-bar">
-              <div class="progress-fill ${fillCls}" style="width:${pct}%"></div>
-            </div>
-          </div>` : ''}
-          <div style="display:flex;gap:8px;margin-top:12px;">
-            <button class="btn btn-secondary" style="padding:10px;font-size:12px;" onclick="editLoan('${c.id}','${l.id}')">✏️ Edit</button>
-            ${l.totalMonths > 0 && l.monthsPaid < l.totalMonths ? `<button class="btn btn-primary" style="padding:10px;font-size:12px;flex:1;" onclick="recordPayment('${c.id}','${l.id}')">✓ Record Payment</button>` : ''}
-          </div>
-        </div>
-      `;
-    });
-
-    // Build amortization breakdown strip
-    const activeLoans = c.loans.filter(l => !(l.totalMonths > 0 && l.monthsPaid >= l.totalMonths));
-    let amortBreakdownHTML = '';
-    if (activeLoans.length > 0) {
-      const rows = activeLoans.map(l => `
-        <div class="amort-row">
-          <span class="ar-label"><span class="ar-dot" style="background:${c.color}"></span>${l.label}</span>
-          <span class="ar-amount">${formatCurrency(l.monthly)}</span>
-        </div>
-      `).join('');
-      amortBreakdownHTML = `
-        <div class="amort-strip">
-          ${rows}
-          ${activeLoans.length > 1 ? `
-            <div class="amort-divider"></div>
-            <div class="amort-total">
-              <span class="at-label">Total Monthly Amortization</span>
-              <span class="at-value">${formatCurrency(totalMo)}</span>
-            </div>
-          ` : ''}
-        </div>
-      `;
-    }
-
-    const tile = document.createElement('div');
-    tile.className = `creditor-tile ${tileClass}`;
-    tile.style.animationDelay = `${ci * 0.06}s`;
-    tile.innerHTML = `
-      <div class="tile-header" onclick="toggleTile(this)">
-        <div class="tile-icon" style="background:${c.color}22;color:${c.color}">${c.icon}</div>
-        <div class="tile-info">
-          <div class="tile-name">${c.name}</div>
-          ${c.account ? `<div class="tile-account">${c.account}</div>` : ''}
-          <div class="tile-meta">
-            <span class="tile-badge ${statusInfo.cls}">${statusInfo.text}</span>
-            <span style="font-size:11px;color:var(--text-muted)">${c.loans.length} loan${c.loans.length > 1 ? 's' : ''}</span>
-          </div>
-        </div>
-        <div class="tile-right">
-          <div class="tile-total">${formatCurrency(totalMo)}</div>
-          <div class="tile-total-label">/ month</div>
-        </div>
-        <span class="tile-chevron">▼</span>
-      </div>
-      ${amortBreakdownHTML}
-      <div class="tile-body">
-        ${loansHTML}
-        <div class="tile-footer">
-          <span class="tf-label">Total Monthly Amortization</span>
-          <span class="tf-value">${formatCurrency(totalMo)}</span>
-        </div>
-        <div style="padding:0 12px 12px;">
-          <button class="btn btn-secondary" style="padding:10px;font-size:12px;" onclick="openAddLoan('${c.id}')">＋ Add Loan to ${c.name}</button>
-        </div>
-      </div>
-    `;
-    list.appendChild(tile);
-  });
+  saveData();
+  renderSchedule();
 }
 
-function getOrdinal(n) {
-  if (!n) return '—';
-  const s = ['th','st','nd','rd'];
-  const v = n % 100;
-  return n + (s[(v-20)%10] || s[v] || s[0]);
+function switchTab(btn, tab) {
+  document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+  btn.classList.add('active');
+  document.getElementById('tab-schedule').style.display = tab === 'schedule' ? 'block' : 'none';
+  document.getElementById('tab-details').style.display = tab === 'details' ? 'block' : 'none';
 }
 
-function toggleTile(header) {
-  const tile = header.closest('.creditor-tile');
-  tile.classList.toggle('expanded');
-}
+// ========== GENERATE SCHEDULE ==========
+function generateSchedule(loan) {
+  const schedule = [];
+  const startDate = new Date(loan.availmentDate + 'T00:00:00');
+  const dueDay = parseInt(loan.dueDay) || 15;
+  const duration = parseInt(loan.duration) || 12;
+  const amort = parseFloat(loan.amortization) || 0;
 
-// ═══════════════════════════════════════════════════
-// RENDER: CALENDAR
-// ═══════════════════════════════════════════════════
-let calMonth = today.getMonth();
-let calYear = today.getFullYear();
-
-function renderCalendar() {
-  const container = document.getElementById('calendar-container');
-
-  // Build due map for this month
-  const dueMap = {};
-  appData.creditors.forEach(c => {
-    c.loans.forEach(l => {
-      if (l.totalMonths > 0 && l.monthsPaid >= l.totalMonths) return;
-      if (!l.monthly) return;
-      const day = l.dueDay;
-      if (!dueMap[day]) dueMap[day] = [];
-      dueMap[day].push({ creditor: c.name, label: l.label, amount: l.monthly, color: c.color, icon: c.icon });
-    });
-  });
-
-  const firstDay = new Date(calYear, calMonth, 1).getDay();
-  const daysInMonth = new Date(calYear, calMonth + 1, 0).getDate();
-  const monthName = new Date(calYear, calMonth).toLocaleDateString('en-PH', { month: 'long', year: 'numeric' });
-
-  let daysHTML = '';
-  ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'].forEach(d => {
-    daysHTML += `<div class="cal-day-label">${d}</div>`;
-  });
-  for (let i = 0; i < firstDay; i++) {
-    daysHTML += `<div class="cal-day empty"></div>`;
+  for (let i = 0; i < duration; i++) {
+    let month = startDate.getMonth() + 1 + i;
+    let year = startDate.getFullYear() + Math.floor((month - 1) / 12);
+    month = ((month - 1) % 12) + 1;
+    const maxDay = new Date(year, month, 0).getDate();
+    const day = Math.min(dueDay, maxDay);
+    const dateStr = `${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+    schedule.push({ date: dateStr, amount: amort, paid: false });
   }
-  for (let d = 1; d <= daysInMonth; d++) {
-    const isToday = d === today.getDate() && calMonth === today.getMonth() && calYear === today.getFullYear();
-    const hasDue = !!dueMap[d];
-    const classes = ['cal-day'];
-    if (isToday) classes.push('today');
-    if (hasDue) classes.push('has-due');
-    daysHTML += `<div class="${classes.join(' ')}">${d}</div>`;
-  }
-
-  // Events list for this month
-  let eventsHTML = '';
-  const sortedDays = Object.keys(dueMap).map(Number).sort((a,b) => a - b);
-  sortedDays.forEach(day => {
-    if (day > daysInMonth) return;
-    dueMap[day].forEach(ev => {
-      const isPast = new Date(calYear, calMonth, day) < today;
-      eventsHTML += `
-        <div class="cal-event">
-          <div class="cal-event-dot" style="background:${ev.color}"></div>
-          <div class="cal-event-info">
-            <div class="cal-event-name">${ev.creditor}</div>
-            <div class="cal-event-sub">${ev.label} · ${getOrdinal(day)} ${isPast ? '(past)' : ''}</div>
-          </div>
-          <div class="cal-event-amount" style="color:${ev.color}">${formatCurrency(ev.amount)}</div>
-        </div>
-      `;
-    });
-  });
-
-  container.innerHTML = `
-    <div class="calendar-month">
-      <div class="cal-header">
-        <div class="cal-month-name">${monthName}</div>
-        <div class="cal-nav">
-          <button onclick="changeMonth(-1)">‹</button>
-          <button onclick="changeMonth(1)">›</button>
-        </div>
-      </div>
-      <div class="cal-grid">${daysHTML}</div>
-      ${eventsHTML ? `<div class="cal-events">${eventsHTML}</div>` : ''}
-    </div>
-  `;
+  return schedule;
 }
 
-function changeMonth(dir) {
-  calMonth += dir;
-  if (calMonth > 11) { calMonth = 0; calYear++; }
-  if (calMonth < 0) { calMonth = 11; calYear--; }
-  renderCalendar();
+// ========== MODALS: CREDITOR ==========
+function showAddCreditorModal() {
+  editingCreditorId = null;
+  document.getElementById('creditor-modal-title').textContent = 'Add Creditor';
+  document.getElementById('creditor-name').value = '';
+  document.getElementById('creditor-type').value = 'Bank';
+  document.getElementById('creditor-notes').value = '';
+  document.getElementById('creditor-save-btn').textContent = 'Add Creditor';
+  document.getElementById('creditor-delete-zone').style.display = 'none';
+  openModal('creditor-modal');
 }
 
-// ═══════════════════════════════════════════════════
-// RENDER: STATS
-// ═══════════════════════════════════════════════════
-function renderStats() {
-  const container = document.getElementById('stats-container');
-
-  let totalPrincipal = 0, totalMonthly = 0, totalPaid = 0, totalRemaining = 0;
-  const creditorData = [];
-
-  appData.creditors.forEach(c => {
-    let cMonthly = 0, cPaid = 0, cTotal = 0;
-    c.loans.forEach(l => {
-      if (l.principal) totalPrincipal += l.principal;
-      const paid = l.monthsPaid * l.monthly;
-      const total = l.totalMonths * l.monthly;
-      totalPaid += paid;
-      totalRemaining += (total - paid);
-      cPaid += paid;
-      cTotal += total;
-      if (!(l.totalMonths > 0 && l.monthsPaid >= l.totalMonths)) {
-        cMonthly += l.monthly || 0;
-        totalMonthly += l.monthly || 0;
-      }
-    });
-    creditorData.push({ name: c.name, color: c.color, monthly: cMonthly, paid: cPaid, total: cTotal });
-  });
-
-  // Monthly breakdown bars
-  let barsHTML = '';
-  creditorData.sort((a,b) => b.monthly - a.monthly).forEach(c => {
-    if (c.monthly <= 0) return;
-    const pct = totalMonthly > 0 ? (c.monthly / totalMonthly * 100) : 0;
-    barsHTML += `
-      <div class="stat-bar-row">
-        <div class="stat-bar-label">${c.name}</div>
-        <div class="stat-bar-track">
-          <div class="stat-bar-fill" style="width:${pct}%;background:${c.color}"></div>
-        </div>
-        <div class="stat-bar-value" style="color:${c.color}">${formatCurrency(c.monthly)}</div>
-      </div>
-    `;
-  });
-
-  container.innerHTML = `
-    <div class="stat-section">
-      <h3>Portfolio Overview</h3>
-      <div class="stat-card">
-        <div class="sc-row">
-          <span class="sc-label">Total Principal Borrowed</span>
-          <span class="sc-value">${formatCurrency(totalPrincipal)}</span>
-        </div>
-        <div class="sc-row">
-          <span class="sc-label">Total Amount Paid</span>
-          <span class="sc-value text-success">${formatCurrency(totalPaid)}</span>
-        </div>
-        <div class="sc-row">
-          <span class="sc-label">Total Remaining</span>
-          <span class="sc-value text-warning">${formatCurrency(totalRemaining)}</span>
-        </div>
-        <div class="sc-row">
-          <span class="sc-label">Monthly Obligation</span>
-          <span class="sc-value text-accent">${formatCurrency(totalMonthly)}</span>
-        </div>
-      </div>
-    </div>
-
-    <div class="stat-section">
-      <h3>Monthly Breakdown by Creditor</h3>
-      ${barsHTML}
-    </div>
-
-    <div class="stat-section">
-      <h3>Debt-Free Timeline</h3>
-      <div class="stat-card">
-        ${creditorData.filter(c => c.total > 0).sort((a,b) => {
-          const aRem = a.total - a.paid;
-          const bRem = b.total - b.paid;
-          const aMos = a.monthly > 0 ? Math.ceil(aRem / a.monthly) : 999;
-          const bMos = b.monthly > 0 ? Math.ceil(bRem / b.monthly) : 999;
-          return aMos - bMos;
-        }).map(c => {
-          const rem = c.total - c.paid;
-          const mosLeft = c.monthly > 0 ? Math.ceil(rem / c.monthly) : 0;
-          const doneDate = new Date();
-          doneDate.setMonth(doneDate.getMonth() + mosLeft);
-          return `<div class="sc-row">
-            <span class="sc-label">${c.name}</span>
-            <span class="sc-value">${mosLeft > 0 ? doneDate.toLocaleDateString('en-PH', {month:'short', year:'numeric'}) : '<span class="text-success">Paid!</span>'}</span>
-          </div>`;
-        }).join('')}
-      </div>
-    </div>
-  `;
-}
-
-// ═══════════════════════════════════════════════════
-// ACTIONS
-// ═══════════════════════════════════════════════════
-function recordPayment(creditorId, loanId) {
-  const c = appData.creditors.find(x => x.id === creditorId);
+function showEditCreditorModal() {
+  const c = getCreditor(currentCreditorId);
   if (!c) return;
-  const l = c.loans.find(x => x.id === loanId);
-  if (!l) return;
-  if (l.monthsPaid < l.totalMonths) {
-    l.monthsPaid++;
-    saveData(appData);
-    renderAll();
-    showToast(`✓ Payment recorded for ${c.name} — ${l.label}`);
+  editingCreditorId = c.id;
+  document.getElementById('creditor-modal-title').textContent = 'Edit Creditor';
+  document.getElementById('creditor-name').value = c.name;
+  document.getElementById('creditor-type').value = c.type;
+  document.getElementById('creditor-notes').value = c.notes || '';
+  document.getElementById('creditor-save-btn').textContent = 'Save Changes';
+  document.getElementById('creditor-delete-zone').style.display = 'block';
+  openModal('creditor-modal');
+}
+
+function saveCreditor() {
+  const name = document.getElementById('creditor-name').value.trim();
+  if (!name) return alert('Please enter a creditor name.');
+  const type = document.getElementById('creditor-type').value;
+  const notes = document.getElementById('creditor-notes').value.trim();
+
+  if (editingCreditorId) {
+    const c = getCreditor(editingCreditorId);
+    if (c) { c.name = name; c.type = type; c.notes = notes; }
+  } else {
+    data.creditors.push({ id: genId(), name, type, notes, loans: [] });
+  }
+  saveData();
+  closeModal('creditor-modal');
+  if (editingCreditorId) { renderLoans(); } else { renderCreditors(); }
+}
+
+async function deleteCreditor() {
+  closeModal('creditor-modal');
+  const ok = await showConfirm('Delete this creditor and all its loans? This cannot be undone.');
+  if (!ok) return;
+  data.creditors = data.creditors.filter(c => c.id !== currentCreditorId);
+  saveData();
+  goToCreditors();
+}
+
+// ========== MODALS: LOAN ==========
+function showAddLoanModal() {
+  editingLoanId = null;
+  document.getElementById('loan-modal-title').textContent = 'Add Loan';
+  document.getElementById('loan-label').value = '';
+  document.getElementById('loan-principal').value = '';
+  document.getElementById('loan-total').value = '';
+  document.getElementById('loan-amortization').value = '';
+  document.getElementById('loan-availment').value = new Date().toISOString().split('T')[0];
+  document.getElementById('loan-due-day').value = '';
+  document.getElementById('loan-duration').value = '';
+  document.getElementById('loan-end-date').value = '';
+  document.getElementById('loan-save-btn').textContent = 'Add Loan';
+  document.getElementById('loan-delete-zone').style.display = 'none';
+  openModal('loan-modal');
+}
+
+function showEditLoanModal() {
+  const loan = getLoan(currentCreditorId, currentLoanId);
+  if (!loan) return;
+  editingLoanId = loan.id;
+  document.getElementById('loan-modal-title').textContent = 'Edit Loan';
+  document.getElementById('loan-label').value = loan.label;
+  document.getElementById('loan-principal').value = loan.principal || '';
+  document.getElementById('loan-total').value = loan.totalAmount || '';
+  document.getElementById('loan-amortization').value = loan.amortization || '';
+  document.getElementById('loan-availment').value = loan.availmentDate || '';
+  document.getElementById('loan-due-day').value = loan.dueDay || '';
+  document.getElementById('loan-duration').value = loan.duration || '';
+  document.getElementById('loan-end-date').value = loan.endDate || '';
+  document.getElementById('loan-save-btn').textContent = 'Save Changes';
+  document.getElementById('loan-delete-zone').style.display = 'block';
+  openModal('loan-modal');
+}
+
+function saveLoan() {
+  const label = document.getElementById('loan-label').value.trim();
+  if (!label) return alert('Please enter a loan label.');
+
+  const principal = parseFloat(document.getElementById('loan-principal').value) || 0;
+  const totalAmount = parseFloat(document.getElementById('loan-total').value) || 0;
+  const amortization = parseFloat(document.getElementById('loan-amortization').value) || 0;
+  const availmentDate = document.getElementById('loan-availment').value;
+  const dueDay = parseInt(document.getElementById('loan-due-day').value) || 15;
+  const duration = parseInt(document.getElementById('loan-duration').value) || 12;
+  let endDate = document.getElementById('loan-end-date').value;
+
+  // Auto-calculate end date if not provided
+  if (!endDate && availmentDate && duration) {
+    const start = new Date(availmentDate + 'T00:00:00');
+    start.setMonth(start.getMonth() + duration);
+    endDate = start.toISOString().split('T')[0];
+  }
+
+  const creditor = getCreditor(currentCreditorId);
+  if (!creditor) return;
+
+  if (editingLoanId) {
+    const loan = creditor.loans.find(l => l.id === editingLoanId);
+    if (loan) {
+      const scheduleChanged = loan.availmentDate !== availmentDate || loan.dueDay !== dueDay ||
+        loan.duration !== duration || loan.amortization !== amortization;
+      loan.label = label;
+      loan.principal = principal;
+      loan.totalAmount = totalAmount;
+      loan.amortization = amortization;
+      loan.availmentDate = availmentDate;
+      loan.dueDay = dueDay;
+      loan.duration = duration;
+      loan.endDate = endDate;
+      if (scheduleChanged) {
+        // Preserve existing paid statuses by date
+        const paidMap = {};
+        loan.schedule.forEach(s => { if (s.paid) paidMap[s.date] = s.paidDate; });
+        loan.schedule = generateSchedule(loan);
+        loan.schedule.forEach(s => {
+          if (paidMap[s.date]) { s.paid = true; s.paidDate = paidMap[s.date]; }
+        });
+      }
+    }
+  } else {
+    const newLoan = {
+      id: genId(), label, principal, totalAmount, amortization,
+      availmentDate, dueDay, duration, endDate, schedule: []
+    };
+    newLoan.schedule = generateSchedule(newLoan);
+    creditor.loans.push(newLoan);
+    currentLoanId = newLoan.id;
+  }
+
+  saveData();
+  closeModal('loan-modal');
+  if (editingLoanId) {
+    renderSchedule();
+  } else {
+    openLoan(currentLoanId);
   }
 }
 
-function editLoan(creditorId, loanId) {
-  const c = appData.creditors.find(x => x.id === creditorId);
-  const l = c.loans.find(x => x.id === loanId);
-  const remaining = (l.duration || 0) - (l.monthsPaid || 0);
-  openModal(`
-    <div class="modal-handle"></div>
-    <h3>Edit: ${c.name} — ${l.label}</h3>
-    <div class="form-group">
-      <label>Label</label>
-      <input id="el-label" value="${l.label}">
-    </div>
-    <div class="form-row">
-      <div class="form-group">
-        <label>Principal</label>
-        <input id="el-principal" type="number" value="${l.principal || ''}">
-      </div>
-      <div class="form-group">
-        <label>Monthly Amort.</label>
-        <input id="el-monthly" type="number" value="${l.monthly || ''}">
-      </div>
-    </div>
-    <div class="form-row">
-      <div class="form-group">
-        <label>Availment Date</label>
-        <input id="el-avail" type="date" value="${l.availDate}">
-      </div>
-      <div class="form-group">
-        <label>End Date</label>
-        <input id="el-end" type="date" value="${l.endDate}">
-      </div>
-    </div>
-    <div class="form-row">
-      <div class="form-group">
-        <label>Due Day</label>
-        <input id="el-dueday" type="number" min="1" max="31" value="${l.dueDay}">
-      </div>
-      <div class="form-group">
-        <label>Duration (months)</label>
-        <input id="el-duration" type="number" value="${l.duration || ''}" oninput="calcRemaining()">
-      </div>
-    </div>
-    <div class="form-row">
-      <div class="form-group">
-        <label>Total Months Paid</label>
-        <input id="el-paid" type="number" value="${l.monthsPaid}" oninput="calcRemaining()">
-      </div>
-      <div class="form-group">
-        <label>Remaining Months to Pay</label>
-        <input id="el-remaining" type="text" value="${remaining >= 0 ? remaining : 0}" readonly style="opacity:0.6;cursor:not-allowed;">
-      </div>
-    </div>
-    <button class="btn btn-primary" onclick="applyLoanEdit('${c.id}','${l.id}')">Apply</button>
-    <button class="btn btn-primary" style="background:var(--success);margin-top:8px;" onclick="saveLoanEdit('${c.id}','${l.id}')">Save & Close</button>
-    <button class="btn btn-danger" onclick="deleteLoan('${c.id}','${l.id}')">Delete Loan</button>
-    <button class="btn btn-secondary" onclick="closeModal()">Cancel</button>
-  `);
-}
-
-function calcRemaining() {
-  const dur = parseInt(document.getElementById('el-duration').value) || 0;
-  const paid = parseInt(document.getElementById('el-paid').value) || 0;
-  const rem = Math.max(0, dur - paid);
-  document.getElementById('el-remaining').value = rem;
-}
-
-function applyLoanEdit(cid, lid) {
-  const c = appData.creditors.find(x => x.id === cid);
-  const l = c.loans.find(x => x.id === lid);
-  l.label = document.getElementById('el-label').value || l.label;
-  l.principal = parseFloat(document.getElementById('el-principal').value) || null;
-  l.monthly = parseFloat(document.getElementById('el-monthly').value) || 0;
-  l.availDate = document.getElementById('el-avail').value || '';
-  l.endDate = document.getElementById('el-end').value || '';
-  l.dueDay = parseInt(document.getElementById('el-dueday').value) || 1;
-  l.duration = parseInt(document.getElementById('el-duration').value) || null;
-  l.monthsPaid = parseInt(document.getElementById('el-paid').value) || 0;
-  l.totalMonths = l.duration || 0;
-  saveData(appData);
-  renderAll();
-  showToast('✓ Changes applied');
-}
-
-function saveLoanEdit(cid, lid) {
-  applyLoanEdit(cid, lid);
-  closeModal();
-  showToast('✓ Loan saved & closed');
-}
-
-function deleteLoan(cid, lid) {
-  if (!confirm('Delete this loan?')) return;
-  const c = appData.creditors.find(x => x.id === cid);
-  c.loans = c.loans.filter(x => x.id !== lid);
-  if (c.loans.length === 0) {
-    appData.creditors = appData.creditors.filter(x => x.id !== cid);
+async function deleteLoan() {
+  closeModal('loan-modal');
+  const ok = await showConfirm('Delete this loan and its entire schedule? This cannot be undone.');
+  if (!ok) return;
+  const creditor = getCreditor(currentCreditorId);
+  if (creditor) {
+    creditor.loans = creditor.loans.filter(l => l.id !== currentLoanId);
+    saveData();
+    goToLoans();
   }
-  saveData(appData);
-  closeModal();
-  renderAll();
-  showToast('Loan deleted');
 }
 
-function openAddLoan(cid) {
-  openModal(`
-    <div class="modal-handle"></div>
-    <h3>Add New Loan</h3>
-    <div class="form-group">
-      <label>Label</label>
-      <input id="al-label" placeholder="e.g. Loan 4">
-    </div>
-    <div class="form-row">
-      <div class="form-group">
-        <label>Principal</label>
-        <input id="al-principal" type="number" placeholder="0.00">
-      </div>
-      <div class="form-group">
-        <label>Monthly Amort.</label>
-        <input id="al-monthly" type="number" placeholder="0.00">
-      </div>
-    </div>
-    <div class="form-row">
-      <div class="form-group">
-        <label>Availment Date</label>
-        <input id="al-avail" type="date">
-      </div>
-      <div class="form-group">
-        <label>End Date</label>
-        <input id="al-end" type="date">
-      </div>
-    </div>
-    <div class="form-row">
-      <div class="form-group">
-        <label>Due Day</label>
-        <input id="al-dueday" type="number" min="1" max="31" placeholder="1">
-      </div>
-      <div class="form-group">
-        <label>Duration (months)</label>
-        <input id="al-duration" type="number" placeholder="12" oninput="calcRemainingAdd()">
-      </div>
-    </div>
-    <div class="form-row">
-      <div class="form-group">
-        <label>Total Months Paid</label>
-        <input id="al-paid" type="number" placeholder="0" oninput="calcRemainingAdd()">
-      </div>
-      <div class="form-group">
-        <label>Remaining Months to Pay</label>
-        <input id="al-remaining" type="text" value="0" readonly style="opacity:0.6;cursor:not-allowed;">
-      </div>
-    </div>
-    <button class="btn btn-primary" onclick="saveNewLoan('${cid}')">Add Loan</button>
-    <button class="btn btn-secondary" onclick="closeModal()">Cancel</button>
-  `);
-}
-
-function calcRemainingAdd() {
-  const dur = parseInt(document.getElementById('al-duration').value) || 0;
-  const paid = parseInt(document.getElementById('al-paid').value) || 0;
-  document.getElementById('al-remaining').value = Math.max(0, dur - paid);
-}
-
-function saveNewLoan(cid) {
-  const c = appData.creditors.find(x => x.id === cid);
-  const id = cid + '_' + Date.now();
-  const dur = parseInt(document.getElementById('al-duration').value) || null;
-  const paid = parseInt(document.getElementById('al-paid').value) || 0;
-  c.loans.push({
-    id,
-    label: document.getElementById('al-label').value || 'New Loan',
-    principal: parseFloat(document.getElementById('al-principal').value) || null,
-    monthly: parseFloat(document.getElementById('al-monthly').value) || 0,
-    availDate: document.getElementById('al-avail').value || '',
-    endDate: document.getElementById('al-end').value || '',
-    dueDay: parseInt(document.getElementById('al-dueday').value) || 1,
-    duration: dur,
-    totalMonths: dur || 0,
-    monthsPaid: paid,
-  });
-  saveData(appData);
-  closeModal();
-  renderAll();
-  showToast('✓ Loan added');
-}
-
-function openAddCreditor() {
-  const icons = ['🏦','🏛️','💳','📱','🔴','📦','🟡','💰','🏧','🏢'];
-  const colors = ['#f5c518','#3b82f6','#ff6348','#a55eea','#ff4757','#2ed573','#ffa502','#1e90ff','#ff6b81','#7bed9f'];
-  openModal(`
-    <div class="modal-handle"></div>
-    <h3>Add New Creditor</h3>
-    <div class="form-group">
-      <label>Creditor Name</label>
-      <input id="ac-name" placeholder="e.g. BDO">
-    </div>
-    <div class="form-group">
-      <label>Account Number (optional)</label>
-      <input id="ac-account" placeholder="e.g. 1234-5678-9012">
-    </div>
-    <div class="form-row">
-      <div class="form-group">
-        <label>Icon</label>
-        <select id="ac-icon">${icons.map(i => `<option value="${i}">${i}</option>`).join('')}</select>
-      </div>
-      <div class="form-group">
-        <label>Color</label>
-        <input id="ac-color" type="color" value="#f5c518" style="height:44px;">
-      </div>
-    </div>
-    <button class="btn btn-primary" onclick="saveNewCreditor()">Create Creditor</button>
-    <button class="btn btn-secondary" onclick="closeModal()">Cancel</button>
-  `);
-}
-
-function saveNewCreditor() {
-  const name = document.getElementById('ac-name').value;
-  if (!name) { showToast('Please enter a name'); return; }
-  const id = 'c_' + Date.now();
-  appData.creditors.push({
-    id,
-    name,
-    account: document.getElementById('ac-account').value || '',
-    icon: document.getElementById('ac-icon').value || '🏦',
-    color: document.getElementById('ac-color').value || '#f5c518',
-    loans: []
-  });
-  saveData(appData);
-  closeModal();
-  renderAll();
-  showToast('✓ Creditor added');
-  // Open add loan immediately
-  setTimeout(() => openAddLoan(id), 400);
-}
-
-// ═══════════════════════════════════════════════════
-// MODAL
-// ═══════════════════════════════════════════════════
-function openModal(html) {
-  document.getElementById('modal-content').innerHTML = html;
-  document.getElementById('modal-overlay').classList.add('show');
-}
-
-function closeModal() {
-  document.getElementById('modal-overlay').classList.remove('show');
-}
-
-document.getElementById('modal-overlay').addEventListener('click', function(e) {
-  if (e.target === this) closeModal();
+// ========== AUTO-CALCULATE DURATION ==========
+document.getElementById('loan-duration').addEventListener('input', function() {
+  const availment = document.getElementById('loan-availment').value;
+  const duration = parseInt(this.value);
+  if (availment && duration > 0) {
+    const start = new Date(availment + 'T00:00:00');
+    start.setMonth(start.getMonth() + duration);
+    document.getElementById('loan-end-date').value = start.toISOString().split('T')[0];
+  }
 });
 
-// ═══════════════════════════════════════════════════
-// DATA MANAGEMENT
-// ═══════════════════════════════════════════════════
+// ========== MODAL HELPERS ==========
+function openModal(id) {
+  const m = document.getElementById(id);
+  requestAnimationFrame(() => m.classList.add('show'));
+  m.onclick = function(e) { if (e.target === m) closeModal(id); };
+}
+
+function closeModal(id) {
+  document.getElementById(id).classList.remove('show');
+}
+
+function showConfirm(msg) {
+  return new Promise(resolve => {
+    confirmResolve = resolve;
+    document.getElementById('confirm-msg').textContent = msg;
+    document.getElementById('confirm-dialog').classList.add('show');
+  });
+}
+
+function closeConfirm(result) {
+  document.getElementById('confirm-dialog').classList.remove('show');
+  if (confirmResolve) { confirmResolve(result); confirmResolve = null; }
+}
+
+function showImportModal() {
+  document.getElementById('import-data').value = '';
+  openModal('import-modal');
+}
+
+// ========== EXPORT / IMPORT ==========
 function exportData() {
-  const blob = new Blob([JSON.stringify(appData, null, 2)], { type: 'application/json' });
+  const json = JSON.stringify(data, null, 2);
+  const blob = new Blob([json], { type: 'application/json' });
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a');
   a.href = url;
-  a.download = `loanpilot_backup_${new Date().toISOString().slice(0,10)}.json`;
+  a.download = 'loanpilot_backup_' + new Date().toISOString().split('T')[0] + '.json';
   a.click();
   URL.revokeObjectURL(url);
-  showToast('📤 Data exported');
 }
 
-function importData(event) {
-  const file = event.target.files[0];
-  if (!file) return;
-  const reader = new FileReader();
-  reader.onload = function(e) {
-    try {
-      const data = JSON.parse(e.target.result);
-      if (data.creditors) {
-        appData = data;
-        saveData(appData);
-        renderAll();
-        showToast('📥 Data imported successfully');
-      } else {
-        showToast('Invalid file format');
-      }
-    } catch(err) {
-      showToast('Error reading file');
-    }
-  };
-  reader.readAsText(file);
-  event.target.value = '';
+function importData() {
+  const raw = document.getElementById('import-data').value.trim();
+  if (!raw) return alert('Please paste JSON data.');
+  try {
+    const imported = JSON.parse(raw);
+    if (!imported.creditors || !Array.isArray(imported.creditors)) throw new Error('Invalid format');
+    data = imported;
+    saveData();
+    closeModal('import-modal');
+    goToCreditors();
+  } catch(e) {
+    alert('Invalid data format. Please paste valid LoanPilot JSON.');
+  }
 }
 
-function confirmReset() {
-  openModal(`
-    <div class="modal-handle"></div>
-    <h3>⚠️ Reset All Data</h3>
-    <p style="color:var(--text-secondary);margin-bottom:16px;font-size:14px;line-height:1.6;">This will delete all creditors and loans and restore the default data. This action cannot be undone. Export your data first if you want a backup.</p>
-    <button class="btn btn-danger" onclick="resetData()" style="margin-top:0;">Yes, Reset Everything</button>
-    <button class="btn btn-secondary" onclick="closeModal()">Cancel</button>
-  `);
+// ========== UTILS ==========
+function esc(str) {
+  const d = document.createElement('div');
+  d.textContent = str;
+  return d.innerHTML;
 }
 
-function resetData() {
-  localStorage.removeItem(STORAGE_KEY);
-  appData = JSON.parse(JSON.stringify(DEFAULT_DATA));
-  saveData(appData);
-  closeModal();
-  renderAll();
-  showToast('Data reset to defaults');
-}
-
-// ═══════════════════════════════════════════════════
-// NAVIGATION
-// ═══════════════════════════════════════════════════
-document.querySelectorAll('.nav-item').forEach(btn => {
-  btn.addEventListener('click', () => {
-    document.querySelectorAll('.nav-item').forEach(b => b.classList.remove('active'));
-    document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
-    btn.classList.add('active');
-    document.getElementById('view-' + btn.dataset.view).classList.add('active');
-
-    if (btn.dataset.view === 'calendar') renderCalendar();
-    if (btn.dataset.view === 'stats') renderStats();
-  });
-});
-
-// ═══════════════════════════════════════════════════
-// RENDER ALL
-// ═══════════════════════════════════════════════════
-function renderAll() {
-  renderHome();
-  // Re-render active views
-  const activeView = document.querySelector('.nav-item.active')?.dataset.view;
-  if (activeView === 'calendar') renderCalendar();
-  if (activeView === 'stats') renderStats();
-}
-
-renderAll();
+// ========== INIT ==========
+loadData();
+renderCreditors();
 </script>
 </body>
 </html>
