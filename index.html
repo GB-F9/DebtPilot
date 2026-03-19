@@ -406,30 +406,38 @@ select.form-input { background-image: url("data:image/svg+xml,%3Csvg xmlns='http
 .currency { font-feature-settings: 'tnum'; }
 
 /* Reorder mode */
-.reorder-controls {
+.drag-handle {
   display: none;
-  flex-direction: column;
-  gap: 4px;
+  padding: 8px;
   margin-left: 8px;
   flex-shrink: 0;
+  cursor: grab;
+  color: var(--text-secondary);
+  font-size: 20px;
+  line-height: 1;
+  user-select: none;
+  -webkit-user-select: none;
 }
-.reorder-mode .reorder-controls { display: flex; }
+.drag-handle:active { cursor: grabbing; }
+.reorder-mode .drag-handle { display: flex; align-items: center; }
 .reorder-mode .creditor-arrow { display: none; }
 .reorder-mode .creditor-card { cursor: default; }
 .reorder-mode .creditor-card:active { transform: none; }
-.reorder-btn-arrow {
-  background: var(--bg);
-  border: 1px solid var(--border);
-  border-radius: 8px;
-  width: 32px; height: 32px;
-  font-size: 16px;
-  cursor: pointer;
-  display: flex; align-items: center; justify-content: center;
-  color: var(--primary);
-  transition: background 0.15s;
+.reorder-mode .creditor-card.dragging {
+  opacity: 0.85;
+  box-shadow: 0 8px 24px rgba(0,0,0,0.18);
+  z-index: 10;
+  position: relative;
+  transform: scale(1.03);
 }
-.reorder-btn-arrow:active { background: var(--primary); color: white; }
-.reorder-btn-arrow:disabled { opacity: 0.25; pointer-events: none; }
+.reorder-mode .creditor-card.drag-over-above {
+  border-top: 3px solid var(--primary);
+  margin-top: -3px;
+}
+.reorder-mode .creditor-card.drag-over-below {
+  border-bottom: 3px solid var(--primary);
+  margin-bottom: -3px;
+}
 .header-btn.active-mode { background: rgba(255,255,255,0.35); }
 
 /* Animations */
@@ -751,30 +759,120 @@ function renderCreditors() {
           ${c.loans.length > 0 ? `<div class="creditor-meta" style="margin-top:2px;">Due: ${[...new Set(c.loans.map(l => formatDueDays(l.dueDay)))].join(' / ')}</div>` : ''}
         </div>
         <div class="creditor-arrow">&#8250;</div>
-        <div class="reorder-controls">
-          <button class="reorder-btn-arrow" onclick="event.stopPropagation(); moveCreditor(${idx}, -1)" ${isFirst ? 'disabled' : ''}>&#9650;</button>
-          <button class="reorder-btn-arrow" onclick="event.stopPropagation(); moveCreditor(${idx}, 1)" ${isLast ? 'disabled' : ''}>&#9660;</button>
-        </div>
+        <div class="drag-handle" data-index="${idx}">&#9776;</div>
       </div>
     </div>`;
   }).join('');
 }
 
-// ========== REORDER ==========
+// ========== REORDER (DRAG & DROP) ==========
 function toggleReorder() {
   reorderMode = !reorderMode;
   const btn = document.getElementById('reorder-btn');
   if (reorderMode) { btn.classList.add('active-mode'); } else { btn.classList.remove('active-mode'); }
   renderCreditors();
+  if (reorderMode) initDragAndDrop();
 }
 
-function moveCreditor(index, direction) {
-  const newIndex = index + direction;
-  if (newIndex < 0 || newIndex >= data.creditors.length) return;
-  const arr = data.creditors;
-  [arr[index], arr[newIndex]] = [arr[newIndex], arr[index]];
-  saveData();
-  renderCreditors();
+let dragState = null;
+
+function initDragAndDrop() {
+  const list = document.getElementById('creditor-list');
+  const handles = list.querySelectorAll('.drag-handle');
+
+  handles.forEach(handle => {
+    handle.addEventListener('touchstart', onDragStart, { passive: false });
+    handle.addEventListener('mousedown', onDragStart);
+  });
+}
+
+function onDragStart(e) {
+  e.preventDefault();
+  const handle = e.currentTarget;
+  const fromIndex = parseInt(handle.dataset.index);
+  const card = handle.closest('.creditor-card');
+  const list = document.getElementById('creditor-list');
+  const cards = [...list.querySelectorAll('.creditor-card')];
+  const rect = card.getBoundingClientRect();
+  const startY = e.type === 'touchstart' ? e.touches[0].clientY : e.clientY;
+
+  card.classList.add('dragging');
+  card.style.transition = 'none';
+
+  dragState = {
+    fromIndex,
+    currentIndex: fromIndex,
+    card,
+    cards,
+    startY,
+    offsetY: 0,
+    cardHeight: rect.height + 14 // card height + margin
+  };
+
+  document.addEventListener('touchmove', onDragMove, { passive: false });
+  document.addEventListener('mousemove', onDragMove);
+  document.addEventListener('touchend', onDragEnd);
+  document.addEventListener('mouseup', onDragEnd);
+}
+
+function onDragMove(e) {
+  if (!dragState) return;
+  e.preventDefault();
+
+  const clientY = e.type === 'touchmove' ? e.touches[0].clientY : e.clientY;
+  const deltaY = clientY - dragState.startY;
+
+  dragState.card.style.transform = `translateY(${deltaY}px) scale(1.03)`;
+
+  // Determine which position we're hovering over
+  const moveBy = Math.round(deltaY / dragState.cardHeight);
+  let newIndex = dragState.fromIndex + moveBy;
+  newIndex = Math.max(0, Math.min(newIndex, dragState.cards.length - 1));
+
+  // Clear all indicators
+  dragState.cards.forEach(c => {
+    c.classList.remove('drag-over-above', 'drag-over-below');
+  });
+
+  // Show drop indicator
+  if (newIndex !== dragState.fromIndex) {
+    if (newIndex < dragState.fromIndex) {
+      dragState.cards[newIndex].classList.add('drag-over-above');
+    } else {
+      dragState.cards[newIndex].classList.add('drag-over-below');
+    }
+  }
+  dragState.currentIndex = newIndex;
+}
+
+function onDragEnd(e) {
+  if (!dragState) return;
+
+  document.removeEventListener('touchmove', onDragMove);
+  document.removeEventListener('mousemove', onDragMove);
+  document.removeEventListener('touchend', onDragEnd);
+  document.removeEventListener('mouseup', onDragEnd);
+
+  const { fromIndex, currentIndex } = dragState;
+
+  // Clean up styles
+  dragState.card.classList.remove('dragging');
+  dragState.card.style.transform = '';
+  dragState.card.style.transition = '';
+  dragState.cards.forEach(c => {
+    c.classList.remove('drag-over-above', 'drag-over-below');
+  });
+
+  // Apply reorder if position changed
+  if (fromIndex !== currentIndex) {
+    const [moved] = data.creditors.splice(fromIndex, 1);
+    data.creditors.splice(currentIndex, 0, moved);
+    saveData();
+    renderCreditors();
+    initDragAndDrop();
+  }
+
+  dragState = null;
 }
 
 // ========== RENDER: LOANS ==========
