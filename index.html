@@ -62,6 +62,7 @@ const fmt=(n,cur=DEFAULT_CURRENCY)=>{const s=CURRENCY_SYMBOLS[cur]||"₱";return
 const daysUntil=(ds)=>{if(!ds)return Infinity;const t=new Date();t.setHours(0,0,0,0);const d=new Date(ds);d.setHours(0,0,0,0);return Math.ceil((d-t)/864e5)};
 const urgencyColor=(d)=>d<0?"#FF4757":d<=3?"#FF6B6B":d<=7?"#FECA57":"#00D2D3";
 const urgencyLabel=(d)=>d<0?Math.abs(d)+"d overdue":d===0?"Due today":d===1?"Due tomorrow":d+"d left";
+const ordinal=(n)=>{n=Number(n);const s=["th","st","nd","rd"];const v=n%100;return n+(s[(v-20)%10]||s[v]||s[0])};
 
 const getNextDueDate=(loan)=>{
 if(!loan.dueDay)return null;
@@ -69,7 +70,7 @@ const t=new Date();let n=new Date(t.getFullYear(),t.getMonth(),loan.dueDay);
 if(n<=t)n.setMonth(n.getMonth()+1);return n.toISOString().split("T")[0];
 };
 
-const EMPTY_LOAN={id:"",category:"credit_card",name:"",bankName:"",accountNumber:"",totalAmount:"",currentBalance:"",minimumPayment:"",interestRate:"",dueDay:"",startDate:"",endDate:"",notes:"",currency:DEFAULT_CURRENCY,payments:[],isActive:true};
+const EMPTY_LOAN={id:"",category:"credit_card",name:"",bankName:"",accountNumber:"",totalAmount:"",currentBalance:"",minimumPayment:"",interestRate:"",dueDay:"",startDate:"",endDate:"",duration:"",monthsToPay:"",notes:"",currency:DEFAULT_CURRENCY,payments:[],isActive:true};
 
 // ═══ STORAGE (localStorage for offline) ═══
 const STORAGE_KEY="debtpilot-loans-v2";
@@ -180,23 +181,27 @@ CATEGORIES.map(c=>h("button",{key:c.id,onClick:()=>set("category",c.id),style:{p
 ),
 // Fields
 h("div",{style:{display:"flex",flexDirection:"column",gap:16}},
-inp("Loan / Card Name *","name","text","e.g. BDO Visa Card"),
-inp("Bank / Lender","bankName","text","e.g. BDO, BPI, Metrobank"),
-inp("Account / Card Number","accountNumber","text","Last 4 digits or full number"),
+inp("Loan / Card Name *","name","text","e.g. EastWest Personal Loan"),
+inp("Bank / Creditor","bankName","text","e.g. East West Bank, BDO, BPI"),
+inp("Account / Card Number","accountNumber","text","e.g. 5179-8882-2248-1006"),
 h("div",{style:{display:"grid",gridTemplateColumns:"1fr 1fr",gap:12}},
-inp("Total Amount","totalAmount","number","0.00"),
+inp("Principal","totalAmount","number","0.00"),
 inp("Current Balance","currentBalance","number","0.00")
 ),
 h("div",{style:{display:"grid",gridTemplateColumns:"1fr 1fr",gap:12}},
-inp("Min. Payment","minimumPayment","number","0.00"),
+inp("Monthly Amortization","minimumPayment","number","0.00"),
 inp("Interest Rate %","interestRate","number","0.00")
 ),
 h("div",{style:{display:"grid",gridTemplateColumns:"1fr 1fr",gap:12}},
-h("div",null,h("label",{className:"label"},"Due Day (1-31)"),h("input",{className:"input-field",type:"number",min:1,max:31,inputMode:"numeric",value:form.dueDay||"",onChange:e=>set("dueDay",Math.min(31,Math.max(1,Number(e.target.value)))),placeholder:"15"})),
+inp("Duration","duration","text","e.g. 18 months"),
+inp("Months to Pay","monthsToPay","number","e.g. 13")
+),
+h("div",{style:{display:"grid",gridTemplateColumns:"1fr 1fr",gap:12}},
+h("div",null,h("label",{className:"label"},"Due Day (1-31)"),h("input",{className:"input-field",type:"number",min:1,max:31,inputMode:"numeric",value:form.dueDay||"",onChange:e=>set("dueDay",Math.min(31,Math.max(1,Number(e.target.value)))),placeholder:"28"})),
 h("div",null,h("label",{className:"label"},"Currency"),h("select",{className:"input-field",value:form.currency||currency,onChange:e=>set("currency",e.target.value),style:{appearance:"none"}},Object.entries(CURRENCY_SYMBOLS).map(([c,s])=>h("option",{key:c,value:c,style:{background:"#1a1a2e"}},c+" ("+s+")"))))
 ),
 h("div",{style:{display:"grid",gridTemplateColumns:"1fr 1fr",gap:12}},
-h("div",null,h("label",{className:"label"},"Start Date"),h("input",{className:"input-field",type:"date",value:form.startDate||"",onChange:e=>set("startDate",e.target.value),style:{colorScheme:"dark"}})),
+h("div",null,h("label",{className:"label"},"Availment Date"),h("input",{className:"input-field",type:"date",value:form.startDate||"",onChange:e=>set("startDate",e.target.value),style:{colorScheme:"dark"}})),
 h("div",null,h("label",{className:"label"},"End Date"),h("input",{className:"input-field",type:"date",value:form.endDate||"",onChange:e=>set("endDate",e.target.value),style:{colorScheme:"dark"}}))
 ),
 h("div",null,h("label",{className:"label"},"Notes"),h("textarea",{className:"input-field",value:form.notes||"",onChange:e=>set("notes",e.target.value),placeholder:"Any additional details...",rows:3,style:{resize:"vertical"}}))
@@ -264,66 +269,100 @@ h("div",{style:{fontSize:13,color:"rgba(255,255,255,.35)"}},new Date(p.date).toL
 // ═══ DASHBOARD VIEW ═══
 function DashboardView({loans,currency,onEdit,onPayment}){
 const active=loans.filter(l=>l.isActive);
-const totalDebt=active.reduce((s,l)=>s+Number(l.currentBalance||0),0);
-const totalOriginal=active.reduce((s,l)=>s+Number(l.totalAmount||l.currentBalance||0),0);
-const totalMinPay=active.reduce((s,l)=>s+Number(l.minimumPayment||0),0);
-const totalPaid=active.reduce((s,l)=>s+(l.payments||[]).reduce((ps,p)=>ps+Number(p.amount),0),0);
-const paidPct=totalOriginal>0?(totalOriginal-totalDebt)/totalOriginal:0;
 
-const upcoming=active.map(l=>({...l,nextDue:getNextDueDate(l),daysLeft:daysUntil(getNextDueDate(l))})).filter(l=>l.nextDue).sort((a,b)=>a.daysLeft-b.daysLeft).slice(0,5);
+// Group by bank, then sort each group's loans by due date
+const bankMap={};
+active.forEach(l=>{
+const key=l.bankName||"Other";
+if(!bankMap[key])bankMap[key]={bankName:key,accountNumber:l.accountNumber||"",loans:[]};
+const nextDue=getNextDueDate(l);
+bankMap[key].loans.push({...l,nextDue,daysLeft:daysUntil(nextDue)});
+});
 
-const donutSegs=active.filter(l=>Number(l.currentBalance)>0).map(l=>{const cat=getCat(l.category);return{color:cat.color,pct:Number(l.currentBalance)/totalDebt,label:l.name}});
+// Sort banks by their earliest due date
+const banks=Object.values(bankMap).map(b=>{
+b.loans.sort((a,c)=>{
+if(a.daysLeft===Infinity&&c.daysLeft===Infinity)return 0;
+if(a.daysLeft===Infinity)return 1;if(c.daysLeft===Infinity)return -1;
+return a.daysLeft-c.daysLeft;
+});
+b.earliestDue=Math.min(...b.loans.map(l=>l.daysLeft));
+b.totalAmort=b.loans.reduce((s,l)=>s+Number(l.minimumPayment||0),0);
+return b;
+}).sort((a,c)=>{
+if(a.earliestDue===Infinity&&c.earliestDue===Infinity)return 0;
+if(a.earliestDue===Infinity)return 1;if(c.earliestDue===Infinity)return -1;
+return a.earliestDue-c.earliestDue;
+});
 
-const catSummary=CATEGORIES.map(c=>{const cl=active.filter(l=>l.category===c.id);return{...c,count:cl.length,balance:cl.reduce((s,l)=>s+Number(l.currentBalance||0),0)}}).filter(c=>c.count>0);
+const fmtDate=(d)=>d?new Date(d).toLocaleDateString("en",{day:"numeric",month:"short",year:"2-digit"}):"—";
+const th={fontSize:10,fontWeight:700,color:"rgba(255,255,255,.4)",letterSpacing:.5,textTransform:"uppercase",padding:"8px 6px",textAlign:"left",whiteSpace:"nowrap"};
+const td={fontSize:13,fontWeight:600,color:"#F0F0F5",padding:"10px 6px",borderTop:"1px solid rgba(255,255,255,.04)",whiteSpace:"nowrap"};
+const tdSub={fontSize:12,fontWeight:500,color:"rgba(255,255,255,.45)",padding:"10px 6px",borderTop:"1px solid rgba(255,255,255,.04)",whiteSpace:"nowrap"};
+
+const renderBank=(bank)=>{
+const cat=getCat(bank.loans[0].category);
+const acctNums=[...new Set(bank.loans.map(l=>l.accountNumber).filter(Boolean))];
+const headerSub=acctNums.length>0?acctNums.map(a=>a.length>8?a:"···"+a.slice(-4)).join(" · "):"";
+
+return h("div",{key:bank.bankName,className:"fade-in",style:{marginBottom:20}},
+// Bank header
+h("div",{style:{background:"linear-gradient(135deg,rgba(0,210,211,.12),rgba(0,210,211,.04))",border:"1px solid rgba(0,210,211,.15)",borderRadius:"16px 16px 0 0",padding:"14px 16px"}},
+h("div",{style:{fontSize:17,fontWeight:800,letterSpacing:-.3,color:"#F0F0F5"}},bank.bankName),
+headerSub&&h("div",{style:{fontSize:12,color:"rgba(255,255,255,.35)",marginTop:3,fontFamily:"monospace",letterSpacing:.5}},headerSub)
+),
+// Table
+h("div",{className:"glass",style:{borderRadius:"0 0 16px 16px",borderTop:"none",overflow:"hidden"}},
+h("div",{style:{overflowX:"auto",WebkitOverflowScrolling:"touch"}},
+h("table",{style:{width:"100%",borderCollapse:"collapse",minWidth:580}},
+h("thead",null,
+h("tr",null,
+h("th",{style:th},"Principal"),
+h("th",{style:th},"Availment"),
+h("th",{style:th},"End Date"),
+h("th",{style:th},"Duration"),
+h("th",{style:th},"Due"),
+h("th",{style:th},"Monthly"),
+h("th",{style:th},"Mos. Left")
+)
+),
+h("tbody",null,
+bank.loans.map(l=>{
+const hasDue=l.daysLeft!==Infinity;
+const dueColor=hasDue?urgencyColor(l.daysLeft):"rgba(255,255,255,.4)";
+return h("tr",{key:l.id,onClick:()=>onEdit(l),style:{cursor:"pointer",transition:"background .15s"}},
+h("td",{style:td},fmt(l.totalAmount||0,l.currency||currency)),
+h("td",{style:tdSub},fmtDate(l.startDate)),
+h("td",{style:tdSub},fmtDate(l.endDate)),
+h("td",{style:tdSub},l.duration||"—"),
+h("td",{style:{...td,color:dueColor,fontWeight:700}},l.dueDay?ordinal(l.dueDay):"—"),
+h("td",{style:td},fmt(l.minimumPayment||0,l.currency||currency)),
+h("td",{style:{...td,textAlign:"center"}},l.monthsToPay||"—")
+);
+}),
+// Totals row
+bank.loans.length>1&&h("tr",null,
+h("td",{colSpan:5,style:{...td,borderTop:"1px solid rgba(0,210,211,.15)"}}),
+h("td",{style:{...td,borderTop:"1px solid rgba(0,210,211,.15)",color:"#00D2D3",fontWeight:800}},fmt(bank.totalAmort,currency)),
+h("td",{style:{...td,borderTop:"1px solid rgba(0,210,211,.15)"}})
+)
+)
+))
+)
+);
+};
 
 return h("div",{style:{padding:"0 16px 120px"}},
 // Header
-h("div",{style:{paddingTop:"env(safe-area-inset-top,16px)",marginBottom:24}},
+h("div",{style:{paddingTop:"env(safe-area-inset-top,16px)",marginBottom:20}},
 h("div",{style:{fontSize:13,color:"rgba(255,255,255,.35)",fontWeight:600,letterSpacing:1.5,textTransform:"uppercase"}},"DebtPilot"),
-h("h1",{style:{fontSize:28,fontWeight:800,letterSpacing:-.8,marginTop:4}},"Overview")
+h("h1",{style:{fontSize:28,fontWeight:800,letterSpacing:-.8,marginTop:4}},"My Obligations"),
+active.length>0&&h("p",{style:{color:"rgba(255,255,255,.3)",fontSize:13,marginTop:4}},active.length+" active across "+banks.length+" creditor"+(banks.length!==1?"s":"")+" · sorted by due date")
 ),
-// Hero card
-h("div",{className:"glass fade-in",style:{padding:"24px 22px",marginBottom:16,background:"linear-gradient(135deg,rgba(0,210,211,.08),rgba(78,205,196,.04))",border:"1px solid rgba(0,210,211,.12)"}},
-h("div",{style:{display:"flex",justifyContent:"space-between",alignItems:"center"}},
-h("div",null,
-h("div",{style:{fontSize:12,color:"rgba(255,255,255,.4)",fontWeight:600,letterSpacing:1,textTransform:"uppercase"}},"Total Outstanding"),
-h("div",{style:{fontSize:34,fontWeight:900,letterSpacing:-1.5,marginTop:6,lineHeight:1}},fmt(totalDebt,currency)),
-h("div",{style:{display:"flex",gap:16,marginTop:14}},
-h("div",null,h("div",{style:{fontSize:10,color:"rgba(255,255,255,.3)",fontWeight:600,letterSpacing:1}},"MONTHLY MIN"),h("div",{style:{fontSize:17,fontWeight:700,color:"#FECA57",marginTop:2}},fmt(totalMinPay,currency))),
-h("div",null,h("div",{style:{fontSize:10,color:"rgba(255,255,255,.3)",fontWeight:600,letterSpacing:1}},"TOTAL PAID"),h("div",{style:{fontSize:17,fontWeight:700,color:"#4ECDC4",marginTop:2}},fmt(totalPaid,currency)))
-)),
-donutSegs.length>0&&h("div",{style:{position:"relative"}},
-h(DonutChart,{segments:donutSegs,size:120}),
-h("div",{style:{position:"absolute",inset:0,display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center"}},
-h("div",{style:{fontSize:20,fontWeight:900,color:"#00D2D3"}},Math.round(paidPct*100)+"%"),
-h("div",{style:{fontSize:9,color:"rgba(255,255,255,.35)",fontWeight:600}},"PAID OFF")
-))
-)),
-// Category cards
-catSummary.length>0&&h("div",{style:{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10,marginBottom:16}},
-catSummary.map(c=>h("div",{key:c.id,className:"glass",style:{padding:"14px 16px",display:"flex",gap:12,alignItems:"center"}},
-h("div",{style:{width:38,height:38,borderRadius:12,display:"flex",alignItems:"center",justifyContent:"center",fontSize:18,background:c.color+"15"}},c.icon),
-h("div",null,
-h("div",{style:{fontSize:13,fontWeight:700,color:c.color}},fmt(c.balance,currency)),
-h("div",{style:{fontSize:11,color:"rgba(255,255,255,.35)"}},c.count+" "+c.label.toLowerCase()+(c.count>1?"s":""))
-)))
-),
-// Upcoming
-upcoming.length>0&&[
-h("h3",{key:"h",style:{fontSize:18,fontWeight:800,letterSpacing:-.3,marginBottom:12,marginTop:24}},"Upcoming Payments"),
-h("div",{key:"l",style:{display:"flex",flexDirection:"column",gap:8}},
-upcoming.map(l=>{const cat=getCat(l.category);return h("div",{key:l.id,className:"glass press",onClick:()=>onPayment(l),style:{padding:"14px 18px",display:"flex",justifyContent:"space-between",alignItems:"center",cursor:"pointer"}},
-h("div",{style:{display:"flex",gap:12,alignItems:"center"}},
-h("div",{style:{width:6,height:36,borderRadius:3,background:urgencyColor(l.daysLeft)}}),
-h("div",null,h("div",{style:{fontSize:15,fontWeight:700}},l.name),h("div",{style:{fontSize:12,color:"rgba(255,255,255,.35)",marginTop:2}},new Date(l.nextDue).toLocaleDateString("en",{month:"short",day:"numeric"})))
-),
-h("div",{style:{textAlign:"right"}},
-h("div",{style:{fontSize:16,fontWeight:700,color:urgencyColor(l.daysLeft)}},urgencyLabel(l.daysLeft)),
-h("div",{style:{fontSize:13,color:"rgba(255,255,255,.4)"}},fmt(l.minimumPayment||l.currentBalance,currency))
-)
-)}))
-],
-active.length===0&&h("div",{style:{textAlign:"center",padding:"60px 20px"}},
+// Bank cards
+banks.map(renderBank),
+// Empty state
+active.length===0&&h("div",{style:{textAlign:"center",padding:"80px 20px"}},
 h("div",{style:{fontSize:48,marginBottom:16}},"📊"),
 h("h3",{style:{fontSize:20,fontWeight:800,marginBottom:8}},"No Loans Yet"),
 h("p",{style:{color:"rgba(255,255,255,.4)",fontSize:15}},"Tap the + button to add your first loan or credit card")
@@ -409,7 +448,7 @@ const f=e.target.files[0];if(!f)return;
 const r=new FileReader();r.onload=ev=>{try{const d=JSON.parse(ev.target.result);if(d.loans&&Array.isArray(d.loans)){onImport(d.loans,d.settings)}else{alert("Invalid backup file format")}}catch{alert("Failed to parse backup file")}};r.readAsText(f);
 };
 const handleCSV=()=>{
-const csv=["Name,Category,Bank,Account,Total,Balance,Min Payment,Interest Rate,Due Day,Currency,Notes",...loans.map(l=>['"'+l.name+'"',l.category,'"'+l.bankName+'"','"'+l.accountNumber+'"',l.totalAmount,l.currentBalance,l.minimumPayment,l.interestRate,l.dueDay,l.currency||settings.currency,'"'+(l.notes||"")+'"'].join(","))].join("\n");
+const csv=["Name,Category,Bank,Account,Principal,Balance,Monthly Amortization,Interest Rate,Due Day,Duration,Months to Pay,Availment Date,End Date,Currency,Notes",...loans.map(l=>['"'+l.name+'"',l.category,'"'+l.bankName+'"','"'+l.accountNumber+'"',l.totalAmount,l.currentBalance,l.minimumPayment,l.interestRate,l.dueDay,'"'+(l.duration||"")+'"',l.monthsToPay||"",l.startDate||"",l.endDate||"",l.currency||settings.currency,'"'+(l.notes||"")+'"'].join(","))].join("\n");
 const b=new Blob([csv],{type:"text/csv"});const u=URL.createObjectURL(b);
 const a=document.createElement("a");a.href=u;a.download="debtpilot-export-"+new Date().toISOString().split("T")[0]+".csv";a.click();URL.revokeObjectURL(u);
 };
