@@ -405,6 +405,33 @@ select.form-input { background-image: url("data:image/svg+xml,%3Csvg xmlns='http
 /* Currency formatting */
 .currency { font-feature-settings: 'tnum'; }
 
+/* Reorder mode */
+.reorder-controls {
+  display: none;
+  flex-direction: column;
+  gap: 4px;
+  margin-left: 8px;
+  flex-shrink: 0;
+}
+.reorder-mode .reorder-controls { display: flex; }
+.reorder-mode .creditor-arrow { display: none; }
+.reorder-mode .creditor-card { cursor: default; }
+.reorder-mode .creditor-card:active { transform: none; }
+.reorder-btn-arrow {
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  width: 32px; height: 32px;
+  font-size: 16px;
+  cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+  color: var(--primary);
+  transition: background 0.15s;
+}
+.reorder-btn-arrow:active { background: var(--primary); color: white; }
+.reorder-btn-arrow:disabled { opacity: 0.25; pointer-events: none; }
+.header-btn.active-mode { background: rgba(255,255,255,0.35); }
+
 /* Animations */
 @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
 .animate-in { animation: fadeIn 0.3s ease; }
@@ -417,6 +444,7 @@ select.form-input { background-image: url("data:image/svg+xml,%3Csvg xmlns='http
   <div class="header">
     <h1>LoanPilot</h1>
     <div class="header-actions">
+      <button class="header-btn" id="reorder-btn" onclick="toggleReorder()" title="Reorder" style="display:none;">&#8645;</button>
       <button class="header-btn" onclick="exportData()" title="Export">&#8681;</button>
       <button class="header-btn" onclick="showImportModal()" title="Import">&#8679;</button>
     </div>
@@ -532,12 +560,14 @@ select.form-input { background-image: url("data:image/svg+xml,%3Csvg xmlns='http
       <input type="date" class="form-input" id="loan-availment">
     </div>
     <div class="form-group">
-      <label class="form-label">Due Day of Month</label>
-      <input type="number" class="form-input" id="loan-due-day" placeholder="e.g. 15" min="1" max="31">
+      <label class="form-label">Due Days of Month</label>
+      <input type="text" class="form-input" id="loan-due-day" placeholder="e.g. 15 or 15,30">
+      <div style="font-size:11px;color:var(--text-secondary);margin-top:4px;">Separate multiple days with comma (e.g. 15,30 for twice a month)</div>
     </div>
     <div class="form-group">
-      <label class="form-label">Duration (months)</label>
+      <label class="form-label">Number of Installments</label>
       <input type="number" class="form-input" id="loan-duration" placeholder="e.g. 12, 24, 36" min="1">
+      <div style="font-size:11px;color:var(--text-secondary);margin-top:4px;">Total number of payments (e.g. 24 for twice-a-month over 12 months)</div>
     </div>
     <div class="form-group">
       <label class="form-label">End Date (auto-calculated or override)</label>
@@ -583,6 +613,7 @@ let currentLoanId = null;
 let editingCreditorId = null;
 let editingLoanId = null;
 let confirmResolve = null;
+let reorderMode = false;
 
 function loadData() {
   try {
@@ -623,6 +654,16 @@ function fmtDate(dateStr) {
   if (!dateStr) return '-';
   const d = new Date(dateStr + 'T00:00:00');
   return d.toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: '2-digit' });
+}
+function formatDueDays(dueDayStr) {
+  const days = parseDueDays(dueDayStr);
+  if (days.length === 1) return ordinal(days[0]) + ' of each month';
+  return days.map(d => ordinal(d)).join(' & ') + ' of each month';
+}
+function ordinal(n) {
+  const s = ['th','st','nd','rd'];
+  const v = n % 100;
+  return n + (s[(v-20)%10] || s[v] || s[0]);
 }
 
 function getInitials(name) {
@@ -666,8 +707,13 @@ function renderCreditors() {
   const list = document.getElementById('creditor-list');
   const summary = document.getElementById('creditors-summary');
 
+  // Show/hide reorder button
+  document.getElementById('reorder-btn').style.display = data.creditors.length > 1 ? 'flex' : 'none';
+  if (reorderMode) list.classList.add('reorder-mode'); else list.classList.remove('reorder-mode');
+
   if (data.creditors.length === 0) {
     summary.style.display = 'none';
+    document.getElementById('reorder-btn').style.display = 'none';
     list.innerHTML = `<div class="empty-state animate-in">
       <div class="icon">&#127974;</div>
       <p>No creditors yet.<br>Tap + to add your first creditor.</p>
@@ -692,20 +738,43 @@ function renderCreditors() {
   document.getElementById('total-remaining').innerHTML = '&#8369;' + fmt(totalRemaining);
   document.getElementById('total-paid-pct').textContent = totalInstallments > 0 ? Math.round(totalPaid / totalInstallments * 100) + '%' : '0%';
 
-  list.innerHTML = data.creditors.map(c => {
+  list.innerHTML = data.creditors.map((c, idx) => {
     const loanCount = c.loans.length;
-    const totalAmt = c.loans.reduce((s, l) => s + (l.totalAmount || 0), 0);
-    return `<div class="creditor-card animate-in" onclick="openCreditor('${c.id}')">
+    const isFirst = idx === 0;
+    const isLast = idx === data.creditors.length - 1;
+    return `<div class="creditor-card animate-in" onclick="if(!reorderMode) openCreditor('${c.id}')">
       <div class="creditor-header">
         <div class="creditor-avatar">${getInitials(c.name)}</div>
         <div class="creditor-info">
           <div class="creditor-name">${esc(c.name)}</div>
           <div class="creditor-meta">${c.type} &middot; ${loanCount} loan${loanCount !== 1 ? 's' : ''}</div>
+          ${c.loans.length > 0 ? `<div class="creditor-meta" style="margin-top:2px;">Due: ${[...new Set(c.loans.map(l => formatDueDays(l.dueDay)))].join(' / ')}</div>` : ''}
         </div>
         <div class="creditor-arrow">&#8250;</div>
+        <div class="reorder-controls">
+          <button class="reorder-btn-arrow" onclick="event.stopPropagation(); moveCreditor(${idx}, -1)" ${isFirst ? 'disabled' : ''}>&#9650;</button>
+          <button class="reorder-btn-arrow" onclick="event.stopPropagation(); moveCreditor(${idx}, 1)" ${isLast ? 'disabled' : ''}>&#9660;</button>
+        </div>
       </div>
     </div>`;
   }).join('');
+}
+
+// ========== REORDER ==========
+function toggleReorder() {
+  reorderMode = !reorderMode;
+  const btn = document.getElementById('reorder-btn');
+  if (reorderMode) { btn.classList.add('active-mode'); } else { btn.classList.remove('active-mode'); }
+  renderCreditors();
+}
+
+function moveCreditor(index, direction) {
+  const newIndex = index + direction;
+  if (newIndex < 0 || newIndex >= data.creditors.length) return;
+  const arr = data.creditors;
+  [arr[index], arr[newIndex]] = [arr[newIndex], arr[index]];
+  saveData();
+  renderCreditors();
 }
 
 // ========== RENDER: LOANS ==========
@@ -734,6 +803,7 @@ function renderLoans() {
         <div>
           <div class="loan-title">${esc(l.label)}</div>
           <div class="loan-subtitle">&#8369;${fmt(l.amortization)} x ${total} &middot; ${paid}/${total} paid</div>
+          <div class="loan-subtitle" style="margin-top:2px;">Due: ${formatDueDays(l.dueDay)}</div>
         </div>
         <div>
           <div class="loan-amount">&#8369;${fmt(l.totalAmount)}</div>
@@ -793,8 +863,8 @@ function renderSchedule() {
       <div class="detail-row"><span class="detail-label">Monthly Amortization</span><span class="detail-value currency">&#8369;${fmt(loan.amortization)}</span></div>
       <div class="detail-row"><span class="detail-label">Availment Date</span><span class="detail-value">${fmtDate(loan.availmentDate)}</span></div>
       <div class="detail-row"><span class="detail-label">End Date</span><span class="detail-value">${fmtDate(loan.endDate)}</span></div>
-      <div class="detail-row"><span class="detail-label">Duration</span><span class="detail-value">${loan.duration} months</span></div>
-      <div class="detail-row"><span class="detail-label">Due Day</span><span class="detail-value">${loan.dueDay} of each month</span></div>
+      <div class="detail-row"><span class="detail-label">Installments</span><span class="detail-value">${loan.duration} payments</span></div>
+      <div class="detail-row"><span class="detail-label">Due Day(s)</span><span class="detail-value">${formatDueDays(loan.dueDay)}</span></div>
       <div class="detail-row"><span class="detail-label">Remaining Balance</span><span class="detail-value currency" style="color:var(--accent-red);">&#8369;${fmt(remaining)}</span></div>
       <div class="detail-row"><span class="detail-label">Progress</span><span class="detail-value">${paid}/${total} (${pct}%)</span></div>
     </div>`;
@@ -821,21 +891,41 @@ function switchTab(btn, tab) {
 }
 
 // ========== GENERATE SCHEDULE ==========
+function parseDueDays(dueDayStr) {
+  if (!dueDayStr) return [15];
+  const days = String(dueDayStr).split(',').map(d => parseInt(d.trim())).filter(d => d >= 1 && d <= 31);
+  return days.length > 0 ? days.sort((a, b) => a - b) : [15];
+}
+
 function generateSchedule(loan) {
   const schedule = [];
   const startDate = new Date(loan.availmentDate + 'T00:00:00');
-  const dueDay = parseInt(loan.dueDay) || 15;
-  const duration = parseInt(loan.duration) || 12;
+  const dueDays = parseDueDays(loan.dueDay);
+  const totalInstallments = parseInt(loan.duration) || 12;
   const amort = parseFloat(loan.amortization) || 0;
 
-  for (let i = 0; i < duration; i++) {
-    let month = startDate.getMonth() + 1 + i;
-    let year = startDate.getFullYear() + Math.floor((month - 1) / 12);
-    month = ((month - 1) % 12) + 1;
+  let count = 0;
+  let monthOffset = 1; // start from next month after availment
+
+  while (count < totalInstallments) {
+    let baseMonth = startDate.getMonth() + monthOffset;
+    let year = startDate.getFullYear() + Math.floor(baseMonth / 12);
+    let month = (baseMonth % 12) + 1;
+    // Fix: if baseMonth is exact multiple of 12, adjust
+    if (baseMonth % 12 === 0 && baseMonth > 0) { month = 1; }
+    // Simpler approach: use Date to get correct month/year
+    const refDate = new Date(startDate.getFullYear(), startDate.getMonth() + monthOffset, 1);
+    year = refDate.getFullYear();
+    month = refDate.getMonth() + 1;
     const maxDay = new Date(year, month, 0).getDate();
-    const day = Math.min(dueDay, maxDay);
-    const dateStr = `${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
-    schedule.push({ date: dateStr, amount: amort, paid: false });
+
+    for (let d = 0; d < dueDays.length && count < totalInstallments; d++) {
+      const day = Math.min(dueDays[d], maxDay);
+      const dateStr = `${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+      schedule.push({ date: dateStr, amount: amort, paid: false });
+      count++;
+    }
+    monthOffset++;
   }
   return schedule;
 }
@@ -934,14 +1024,16 @@ function saveLoan() {
   const totalAmount = parseFloat(document.getElementById('loan-total').value) || 0;
   const amortization = parseFloat(document.getElementById('loan-amortization').value) || 0;
   const availmentDate = document.getElementById('loan-availment').value;
-  const dueDay = parseInt(document.getElementById('loan-due-day').value) || 15;
+  const dueDay = document.getElementById('loan-due-day').value.trim() || '15';
   const duration = parseInt(document.getElementById('loan-duration').value) || 12;
   let endDate = document.getElementById('loan-end-date').value;
 
-  // Auto-calculate end date if not provided
+  // Auto-calculate end date based on schedule
   if (!endDate && availmentDate && duration) {
+    const dueDays = parseDueDays(dueDay);
+    const monthsNeeded = Math.ceil(duration / dueDays.length);
     const start = new Date(availmentDate + 'T00:00:00');
-    start.setMonth(start.getMonth() + duration);
+    start.setMonth(start.getMonth() + monthsNeeded);
     endDate = start.toISOString().split('T')[0];
   }
 
@@ -951,8 +1043,8 @@ function saveLoan() {
   if (editingLoanId) {
     const loan = creditor.loans.find(l => l.id === editingLoanId);
     if (loan) {
-      const scheduleChanged = loan.availmentDate !== availmentDate || loan.dueDay !== dueDay ||
-        loan.duration !== duration || loan.amortization !== amortization;
+      const scheduleChanged = loan.availmentDate !== availmentDate || String(loan.dueDay) !== String(dueDay) ||
+        parseInt(loan.duration) !== parseInt(duration) || parseFloat(loan.amortization) !== parseFloat(amortization);
       loan.label = label;
       loan.principal = principal;
       loan.totalAmount = totalAmount;
@@ -1002,22 +1094,33 @@ async function deleteLoan() {
   }
 }
 
-// ========== AUTO-CALCULATE DURATION ==========
-document.getElementById('loan-duration').addEventListener('input', function() {
+// ========== AUTO-CALCULATE END DATE ==========
+function autoCalcEndDate() {
   const availment = document.getElementById('loan-availment').value;
-  const duration = parseInt(this.value);
-  if (availment && duration > 0) {
+  const installments = parseInt(document.getElementById('loan-duration').value);
+  const dueDayStr = document.getElementById('loan-due-day').value.trim();
+  if (availment && installments > 0) {
+    const dueDays = parseDueDays(dueDayStr);
+    const monthsNeeded = Math.ceil(installments / dueDays.length);
     const start = new Date(availment + 'T00:00:00');
-    start.setMonth(start.getMonth() + duration);
+    start.setMonth(start.getMonth() + monthsNeeded);
     document.getElementById('loan-end-date').value = start.toISOString().split('T')[0];
   }
-});
+}
+document.getElementById('loan-duration').addEventListener('input', autoCalcEndDate);
+document.getElementById('loan-due-day').addEventListener('input', autoCalcEndDate);
 
 // ========== MODAL HELPERS ==========
 function openModal(id) {
   const m = document.getElementById(id);
+  let pressedOnOverlay = false;
   requestAnimationFrame(() => m.classList.add('show'));
-  m.onclick = function(e) { if (e.target === m) closeModal(id); };
+  m.onmousedown = m.ontouchstart = function(e) { pressedOnOverlay = (e.target === m); };
+  m.onmouseup = m.ontouchend = function(e) {
+    if (pressedOnOverlay && e.target === m) closeModal(id);
+    pressedOnOverlay = false;
+  };
+  m.onclick = null; // remove old handler
 }
 
 function closeModal(id) {
