@@ -824,18 +824,17 @@ function renderCreditors() {
       if (Array.isArray(l.dueDay)) dueDays.push(...l.dueDay);
       else if (l.dueDay) dueDays.push(l.dueDay);
     });
-    if (dueDays.length === 0) return 'mid'; // default
-    // If any due day is 1-15, it belongs to mid-month (15th payday)
-    // If any due day is 16-31, it belongs to end-of-month (30th payday)
-    const hasMid = dueDays.some(d => d >= 1 && d <= 15);
-    const hasEnd = dueDays.some(d => d >= 16 && d <= 31);
-    if (hasMid && hasEnd) return 'both';
-    if (hasEnd) return 'end';
-    return 'mid';
+    if (dueDays.length === 0) return 'first'; // default
+    // Due 1-15 ΓåÆ funded from 30th salary; Due 16-31 ΓåÆ funded from 15th salary
+    const hasFirstHalf = dueDays.some(d => d >= 1 && d <= 15);
+    const hasSecondHalf = dueDays.some(d => d >= 16 && d <= 31);
+    if (hasFirstHalf && hasSecondHalf) return 'both';
+    if (hasSecondHalf) return 'second';
+    return 'first';
   }
 
-  const midMonth = []; // due 1st-15th ΓåÆ paid from 15th salary
-  const endMonth = []; // due 16th-31st ΓåÆ paid from 30th salary
+  const payday15 = []; // due 16th-30th ΓåÆ funded from 15th salary
+  const payday30 = []; // due 1st-15th ΓåÆ funded from 30th salary
   const allPaid = []; // fully paid creditors
 
   data.creditors.forEach((c, idx) => {
@@ -845,48 +844,20 @@ function renderCreditors() {
       return;
     }
     const group = getPaydayGroup(c);
-    if (group === 'end') endMonth.push({ c, idx });
-    else if (group === 'both') { midMonth.push({ c, idx }); endMonth.push({ c, idx }); }
-    else midMonth.push({ c, idx });
+    if (group === 'first') payday30.push({ c, idx });
+    else if (group === 'second') payday15.push({ c, idx });
+    else if (group === 'both') { payday30.push({ c, idx }); payday15.push({ c, idx }); }
   });
 
   let html = '';
 
   const periodKey = getCurrentPeriodKey();
 
-  // Mid-month section (15th payday)
-  if (midMonth.length > 0) {
+  // 15th Payday section ΓåÆ covers dues on 16th-30th
+  if (payday15.length > 0) {
     let sectionTotal = 0;
     let paidCount = 0;
-    midMonth.forEach(({ c }) => {
-      if (c.periodPaid === periodKey) paidCount++;
-      c.loans.forEach(l => {
-        const next = l.schedule.find(s => !s.paid);
-        if (next) {
-          const dueDays = Array.isArray(l.dueDay) ? l.dueDay : [l.dueDay];
-          if (dueDays.some(d => d >= 1 && d <= 15)) sectionTotal += next.amount;
-        }
-      });
-    });
-    const pendingCount = midMonth.length - paidCount;
-    const statusStr = paidCount === midMonth.length
-      ? `<span style="color:var(--success);">All funded! &#10003;</span>`
-      : `<span style="color:#e67e22;">${pendingCount} pending</span>`;
-    html += `<div class="payday-section">
-      <div class="payday-header">
-        <div class="payday-label">&#128181; 15th Payday</div>
-        <div class="payday-total">&#8369;${fmt(sectionTotal)}</div>
-      </div>
-      <div style="padding:0 16px 4px; font-size:12px; color:var(--text-secondary);">Due 1st&ndash;15th &middot; ${paidCount}/${midMonth.length} funded &middot; ${statusStr}</div>
-      ${midMonth.map(({ c, idx }) => buildCard(c, idx)).join('')}
-    </div>`;
-  }
-
-  // End-of-month section (30th payday)
-  if (endMonth.length > 0) {
-    let sectionTotal = 0;
-    let paidCount = 0;
-    endMonth.forEach(({ c }) => {
+    payday15.forEach(({ c }) => {
       if (c.periodPaid === periodKey) paidCount++;
       c.loans.forEach(l => {
         const next = l.schedule.find(s => !s.paid);
@@ -896,8 +867,36 @@ function renderCreditors() {
         }
       });
     });
-    const pendingCount = endMonth.length - paidCount;
-    const statusStr = paidCount === endMonth.length
+    const pendingCount = payday15.length - paidCount;
+    const statusStr = paidCount === payday15.length
+      ? `<span style="color:var(--success);">All funded! &#10003;</span>`
+      : `<span style="color:#e67e22;">${pendingCount} pending</span>`;
+    html += `<div class="payday-section">
+      <div class="payday-header">
+        <div class="payday-label">&#128181; 15th Payday</div>
+        <div class="payday-total">&#8369;${fmt(sectionTotal)}</div>
+      </div>
+      <div style="padding:0 16px 4px; font-size:12px; color:var(--text-secondary);">Due 16th&ndash;30th &middot; ${paidCount}/${payday15.length} funded &middot; ${statusStr}</div>
+      ${payday15.map(({ c, idx }) => buildCard(c, idx)).join('')}
+    </div>`;
+  }
+
+  // 30th Payday section ΓåÆ covers dues on 1st-15th
+  if (payday30.length > 0) {
+    let sectionTotal = 0;
+    let paidCount = 0;
+    payday30.forEach(({ c }) => {
+      if (c.periodPaid === periodKey) paidCount++;
+      c.loans.forEach(l => {
+        const next = l.schedule.find(s => !s.paid);
+        if (next) {
+          const dueDays = Array.isArray(l.dueDay) ? l.dueDay : [l.dueDay];
+          if (dueDays.some(d => d >= 1 && d <= 15)) sectionTotal += next.amount;
+        }
+      });
+    });
+    const pendingCount = payday30.length - paidCount;
+    const statusStr = paidCount === payday30.length
       ? `<span style="color:var(--success);">All funded! &#10003;</span>`
       : `<span style="color:#e67e22;">${pendingCount} pending</span>`;
     html += `<div class="payday-section">
@@ -905,8 +904,8 @@ function renderCreditors() {
         <div class="payday-label">&#128181; 30th Payday</div>
         <div class="payday-total">&#8369;${fmt(sectionTotal)}</div>
       </div>
-      <div style="padding:0 16px 4px; font-size:12px; color:var(--text-secondary);">Due 16th&ndash;31st &middot; ${paidCount}/${endMonth.length} funded &middot; ${statusStr}</div>
-      ${endMonth.map(({ c, idx }) => buildCard(c, idx)).join('')}
+      <div style="padding:0 16px 4px; font-size:12px; color:var(--text-secondary);">Due 1st&ndash;15th &middot; ${paidCount}/${payday30.length} funded &middot; ${statusStr}</div>
+      ${payday30.map(({ c, idx }) => buildCard(c, idx)).join('')}
     </div>`;
   }
 
