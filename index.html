@@ -870,14 +870,14 @@ function renderCreditors() {
     });
     const pendingCount = midMonth.length - paidCount;
     const statusStr = paidCount === midMonth.length
-      ? `<span style="color:var(--success);">All paid! &#10003;</span>`
+      ? `<span style="color:var(--success);">All funded! &#10003;</span>`
       : `<span style="color:#e67e22;">${pendingCount} pending</span>`;
     html += `<div class="payday-section">
       <div class="payday-header">
         <div class="payday-label">&#128181; 15th Payday</div>
         <div class="payday-total">&#8369;${fmt(sectionTotal)}</div>
       </div>
-      <div style="padding:0 16px 4px; font-size:12px; color:var(--text-secondary);">${paidCount}/${midMonth.length} paid &middot; ${statusStr}</div>
+      <div style="padding:0 16px 4px; font-size:12px; color:var(--text-secondary);">Due 1st&ndash;15th &middot; ${paidCount}/${midMonth.length} funded &middot; ${statusStr}</div>
       ${midMonth.map(({ c, idx }) => buildCard(c, idx)).join('')}
     </div>`;
   }
@@ -898,14 +898,14 @@ function renderCreditors() {
     });
     const pendingCount = endMonth.length - paidCount;
     const statusStr = paidCount === endMonth.length
-      ? `<span style="color:var(--success);">All paid! &#10003;</span>`
+      ? `<span style="color:var(--success);">All funded! &#10003;</span>`
       : `<span style="color:#e67e22;">${pendingCount} pending</span>`;
     html += `<div class="payday-section">
       <div class="payday-header">
         <div class="payday-label">&#128181; 30th Payday</div>
         <div class="payday-total">&#8369;${fmt(sectionTotal)}</div>
       </div>
-      <div style="padding:0 16px 4px; font-size:12px; color:var(--text-secondary);">${paidCount}/${endMonth.length} paid &middot; ${statusStr}</div>
+      <div style="padding:0 16px 4px; font-size:12px; color:var(--text-secondary);">Due 16th&ndash;31st &middot; ${paidCount}/${endMonth.length} funded &middot; ${statusStr}</div>
       ${endMonth.map(({ c, idx }) => buildCard(c, idx)).join('')}
     </div>`;
   }
