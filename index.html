@@ -104,6 +104,7 @@ body {
 .creditor-info { flex: 1; min-width: 0; }
 .creditor-name { font-weight: 600; font-size: 16px; }
 .creditor-meta { font-size: 13px; color: var(--text-secondary); margin-top: 2px; }
+.creditor-next-payment { font-size: 13px; color: var(--primary); margin-top: 4px; font-weight: 500; }
 .creditor-arrow { color: var(--text-secondary); font-size: 18px; flex-shrink: 0; }
 
 /* Loan Card */
@@ -750,6 +751,20 @@ function renderCreditors() {
     const loanCount = c.loans.length;
     const isFirst = idx === 0;
     const isLast = idx === data.creditors.length - 1;
+    // Calculate next payment: sum of next unpaid installment per loan
+    let nextPaymentTotal = 0;
+    let nextPaymentDate = null;
+    c.loans.forEach(l => {
+      const nextUnpaid = l.schedule.find(s => !s.paid);
+      if (nextUnpaid) {
+        nextPaymentTotal += nextUnpaid.amount;
+        const d = new Date(nextUnpaid.date);
+        if (!nextPaymentDate || d < nextPaymentDate) nextPaymentDate = d;
+      }
+    });
+    const nextPaymentStr = nextPaymentTotal > 0
+      ? `<div class="creditor-next-payment">Next due: <strong>&#8369;${fmt(nextPaymentTotal)}</strong>${nextPaymentDate ? ` on ${nextPaymentDate.toLocaleDateString('en-US', {month:'short', day:'numeric'})}` : ''}</div>`
+      : (c.loans.length > 0 ? `<div class="creditor-next-payment" style="color:var(--success);">&#10003; All paid!</div>` : '');
     return `<div class="creditor-card animate-in" onclick="if(!reorderMode) openCreditor('${c.id}')">
       <div class="creditor-header">
         <div class="creditor-avatar">${getInitials(c.name)}</div>
@@ -757,6 +772,7 @@ function renderCreditors() {
           <div class="creditor-name">${esc(c.name)}</div>
           <div class="creditor-meta">${c.type} &middot; ${loanCount} loan${loanCount !== 1 ? 's' : ''}</div>
           ${c.loans.length > 0 ? `<div class="creditor-meta" style="margin-top:2px;">Due: ${[...new Set(c.loans.map(l => formatDueDays(l.dueDay)))].join(' / ')}</div>` : ''}
+          ${nextPaymentStr}
         </div>
         <div class="creditor-arrow">&#8250;</div>
         <div class="drag-handle" data-index="${idx}">&#9776;</div>
