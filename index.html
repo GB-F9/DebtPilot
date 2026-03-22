@@ -821,11 +821,10 @@ function renderCreditors() {
     // Collect all due days across all loans
     const dueDays = [];
     c.loans.forEach(l => {
-      if (Array.isArray(l.dueDay)) dueDays.push(...l.dueDay);
-      else if (l.dueDay) dueDays.push(l.dueDay);
+      parseDueDays(l.dueDay).forEach(d => dueDays.push(d));
     });
     if (dueDays.length === 0) return 'first'; // default
-    // Due 1-15 ΓåÆ funded from 30th salary; Due 16-31 ΓåÆ funded from 15th salary
+    // Due 1-15 → funded from 30th salary; Due 16-31 → funded from 15th salary
     const hasFirstHalf = dueDays.some(d => d >= 1 && d <= 15);
     const hasSecondHalf = dueDays.some(d => d >= 16 && d <= 31);
     if (hasFirstHalf && hasSecondHalf) return 'both';
@@ -833,8 +832,8 @@ function renderCreditors() {
     return 'first';
   }
 
-  const payday15 = []; // due 16th-30th ΓåÆ funded from 15th salary
-  const payday30 = []; // due 1st-15th ΓåÆ funded from 30th salary
+  const payday15 = []; // due 16th-30th → funded from 15th salary
+  const payday30 = []; // due 1st-15th → funded from 30th salary
   const allPaid = []; // fully paid creditors
 
   data.creditors.forEach((c, idx) => {
@@ -853,7 +852,7 @@ function renderCreditors() {
 
   const periodKey = getCurrentPeriodKey();
 
-  // 15th Payday section ΓåÆ covers dues on 16th-30th
+  // 15th Payday section → covers dues on 16th-30th
   if (payday15.length > 0) {
     let sectionTotal = 0;
     let paidCount = 0;
@@ -881,7 +880,7 @@ function renderCreditors() {
     </div>`;
   }
 
-  // 30th Payday section ΓåÆ covers dues on 1st-15th
+  // 30th Payday section → covers dues on 1st-15th
   if (payday30.length > 0) {
     let sectionTotal = 0;
     let paidCount = 0;
