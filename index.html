@@ -676,18 +676,37 @@ function getCurrentPeriodKey() {
   return `${y}-${m}-${periodDay}`;
 }
 
-function togglePeriodPaid(creditorId) {
+function togglePeriodPaid(creditorId, section) {
   const c = data.creditors.find(x => x.id === creditorId);
   if (!c) return;
-  const periodKey = getCurrentPeriodKey();
-  if (c.periodPaid === periodKey) {
-    delete c.periodPaid;
+  if (!c.periodsPaid) c.periodsPaid = {};
+  const now = new Date();
+  const key = `${section}-${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+  if (c.periodsPaid[key]) {
+    delete c.periodsPaid[key];
   } else {
-    c.periodPaid = periodKey;
+    c.periodsPaid[key] = true;
   }
   saveData();
   renderCreditors();
   if (reorderMode) initDragAndDrop();
+}
+function isPeriodPaid(c, section) {
+  if (!c.periodsPaid) {
+    // migrate old single periodPaid field
+    if (c.periodPaid) {
+      c.periodsPaid = {};
+      const parts = c.periodPaid.split('-');
+      const day = parts[2];
+      c.periodsPaid[`${day}-${parts[0]}-${parts[1]}`] = true;
+      delete c.periodPaid;
+    } else {
+      return false;
+    }
+  }
+  const now = new Date();
+  const key = `${section}-${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+  return !!c.periodsPaid[key];
 }
 
 function fmt(amount) {
@@ -782,7 +801,7 @@ function renderCreditors() {
   document.getElementById('total-paid-pct').textContent = totalInstallments > 0 ? Math.round(totalPaid / totalInstallments * 100) + '%' : '0%';
 
   // Helper to build a creditor card
-  function buildCard(c, idx) {
+  function buildCard(c, idx, section) {
     const loanCount = c.loans.length;
     let nextPaymentTotal = 0;
     let nextPaymentDate = null;
@@ -797,12 +816,11 @@ function renderCreditors() {
     const nextPaymentStr = nextPaymentTotal > 0
       ? `<div class="creditor-next-payment">Next due: <strong>&#8369;${fmt(nextPaymentTotal)}</strong>${nextPaymentDate ? ` on ${nextPaymentDate.toLocaleDateString('en-US', {month:'short', day:'numeric'})}` : ''}</div>`
       : (c.loans.length > 0 ? `<div class="creditor-next-payment" style="color:var(--success);">&#10003; All paid!</div>` : '');
-    const periodKey = getCurrentPeriodKey();
-    const isPeriodPaid = c.periodPaid && c.periodPaid === periodKey;
+    const sectionPaid = section ? isPeriodPaid(c, section) : false;
     const hasUnpaidLoans = nextPaymentTotal > 0;
-    return `<div class="creditor-card animate-in${isPeriodPaid ? ' period-paid' : ''}" onclick="if(!reorderMode) openCreditor('${c.id}')" data-index="${idx}">
+    return `<div class="creditor-card animate-in${sectionPaid ? ' period-paid' : ''}" onclick="if(!reorderMode) openCreditor('${c.id}')" data-index="${idx}">
       <div class="creditor-header">
-        ${hasUnpaidLoans ? `<div class="payday-check${isPeriodPaid ? ' checked' : ''}" onclick="event.stopPropagation(); togglePeriodPaid('${c.id}')">&#10003;</div>` : ''}
+        ${hasUnpaidLoans && section ? `<div class="payday-check${sectionPaid ? ' checked' : ''}" onclick="event.stopPropagation(); togglePeriodPaid('${c.id}', '${section}')">&#10003;</div>` : ''}
         <div class="creditor-avatar">${getInitials(c.name)}</div>
         <div class="creditor-info">
           <div class="creditor-name">${esc(c.name)}</div>
@@ -850,18 +868,16 @@ function renderCreditors() {
 
   let html = '';
 
-  const periodKey = getCurrentPeriodKey();
-
   // 15th Payday section → covers dues on 16th-30th
   if (payday15.length > 0) {
     let sectionTotal = 0;
     let paidCount = 0;
     payday15.forEach(({ c }) => {
-      if (c.periodPaid === periodKey) paidCount++;
+      if (isPeriodPaid(c, '15')) paidCount++;
       c.loans.forEach(l => {
         const next = l.schedule.find(s => !s.paid);
         if (next) {
-          const dueDays = Array.isArray(l.dueDay) ? l.dueDay : [l.dueDay];
+          const dueDays = parseDueDays(l.dueDay);
           if (dueDays.some(d => d >= 16 && d <= 31)) sectionTotal += next.amount;
         }
       });
@@ -876,7 +892,7 @@ function renderCreditors() {
         <div class="payday-total">&#8369;${fmt(sectionTotal)}</div>
       </div>
       <div style="padding:0 16px 4px; font-size:12px; color:var(--text-secondary);">Due 16th&ndash;30th &middot; ${paidCount}/${payday15.length} funded &middot; ${statusStr}</div>
-      ${payday15.map(({ c, idx }) => buildCard(c, idx)).join('')}
+      ${payday15.map(({ c, idx }) => buildCard(c, idx, '15')).join('')}
     </div>`;
   }
 
@@ -885,11 +901,11 @@ function renderCreditors() {
     let sectionTotal = 0;
     let paidCount = 0;
     payday30.forEach(({ c }) => {
-      if (c.periodPaid === periodKey) paidCount++;
+      if (isPeriodPaid(c, '30')) paidCount++;
       c.loans.forEach(l => {
         const next = l.schedule.find(s => !s.paid);
         if (next) {
-          const dueDays = Array.isArray(l.dueDay) ? l.dueDay : [l.dueDay];
+          const dueDays = parseDueDays(l.dueDay);
           if (dueDays.some(d => d >= 1 && d <= 15)) sectionTotal += next.amount;
         }
       });
@@ -904,7 +920,7 @@ function renderCreditors() {
         <div class="payday-total">&#8369;${fmt(sectionTotal)}</div>
       </div>
       <div style="padding:0 16px 4px; font-size:12px; color:var(--text-secondary);">Due 1st&ndash;15th &middot; ${paidCount}/${payday30.length} funded &middot; ${statusStr}</div>
-      ${payday30.map(({ c, idx }) => buildCard(c, idx)).join('')}
+      ${payday30.map(({ c, idx }) => buildCard(c, idx, '30')).join('')}
     </div>`;
   }
 
