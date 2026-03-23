@@ -109,6 +109,14 @@ body {
 .payday-section { margin-bottom: 8px; }
 .payday-header { display: flex; justify-content: space-between; align-items: center; padding: 12px 16px 4px; }
 .payday-label { font-size: 14px; font-weight: 700; color: var(--primary); text-transform: uppercase; letter-spacing: 0.5px; }
+.section-drag-handle {
+  cursor: grab; color: var(--text-secondary); font-size: 18px; padding: 4px 8px;
+  user-select: none; -webkit-user-select: none; touch-action: none;
+}
+.section-drag-handle:active { cursor: grabbing; }
+.payday-section.section-dragging { opacity: 0.7; box-shadow: 0 8px 24px rgba(0,0,0,0.15); position: relative; z-index: 10; transform: scale(1.02); }
+.payday-section.section-drag-over-above { border-top: 3px solid var(--primary); margin-top: -3px; }
+.payday-section.section-drag-over-below { border-bottom: 3px solid var(--primary); margin-bottom: -3px; }
 .payday-total { font-size: 14px; font-weight: 700; color: var(--text); }
 .creditor-arrow { color: var(--text-secondary); font-size: 18px; flex-shrink: 0; }
 .payday-check { width: 28px; height: 28px; border-radius: 50%; border: 2.5px solid #ccc; display: flex; align-items: center; justify-content: center; flex-shrink: 0; margin-right: 10px; cursor: pointer; transition: all 0.2s; background: white; font-size: 16px; font-weight: 700; color: transparent; }
@@ -866,7 +874,8 @@ function renderCreditors() {
     else if (group === 'both') { payday30.push({ c, idx }); payday15.push({ c, idx }); }
   });
 
-  let html = '';
+  // Build sections as keyed objects so we can reorder them
+  const sections = {};
 
   // 15th Payday section → covers dues on 16th-30th
   if (payday15.length > 0) {
@@ -886,8 +895,9 @@ function renderCreditors() {
     const statusStr = paidCount === payday15.length
       ? `<span style="color:var(--success);">All funded! &#10003;</span>`
       : `<span style="color:#e67e22;">${pendingCount} pending</span>`;
-    html += `<div class="payday-section">
+    sections['payday15'] = `<div class="payday-section" data-section="payday15">
       <div class="payday-header">
+        <span class="section-drag-handle" data-section="payday15">&#9776;</span>
         <div class="payday-label">&#128181; 15th Payday</div>
         <div class="payday-total">&#8369;${fmt(sectionTotal)}</div>
       </div>
@@ -914,8 +924,9 @@ function renderCreditors() {
     const statusStr = paidCount === payday30.length
       ? `<span style="color:var(--success);">All funded! &#10003;</span>`
       : `<span style="color:#e67e22;">${pendingCount} pending</span>`;
-    html += `<div class="payday-section">
+    sections['payday30'] = `<div class="payday-section" data-section="payday30">
       <div class="payday-header">
+        <span class="section-drag-handle" data-section="payday30">&#9776;</span>
         <div class="payday-label">&#128181; 30th Payday</div>
         <div class="payday-total">&#8369;${fmt(sectionTotal)}</div>
       </div>
@@ -924,7 +935,18 @@ function renderCreditors() {
     </div>`;
   }
 
-  // All paid section
+  // Render sections in saved order
+  if (!data.sectionOrder) data.sectionOrder = ['payday15', 'payday30'];
+  // Add any new sections not yet in order, remove stale ones
+  const availableKeys = Object.keys(sections);
+  const order = data.sectionOrder.filter(k => availableKeys.includes(k));
+  availableKeys.forEach(k => { if (!order.includes(k)) order.push(k); });
+  data.sectionOrder = order;
+
+  let html = '';
+  order.forEach(key => { if (sections[key]) html += sections[key]; });
+
+  // All paid section (not draggable)
   if (allPaid.length > 0) {
     html += `<div class="payday-section">
       <div class="payday-header">
@@ -944,6 +966,7 @@ function renderCreditors() {
   }
 
   list.innerHTML = html;
+  initSectionDragAndDrop();
 }
 
 // ========== REORDER (DRAG & DROP) ==========
@@ -1054,6 +1077,72 @@ function onDragEnd(e) {
   }
 
   dragState = null;
+}
+
+// ========== SECTION DRAG & DROP ==========
+let sectionDragState = null;
+function initSectionDragAndDrop() {
+  const handles = document.querySelectorAll('.section-drag-handle');
+  handles.forEach(handle => {
+    handle.addEventListener('touchstart', onSectionDragStart, { passive: false });
+    handle.addEventListener('mousedown', onSectionDragStart);
+  });
+}
+function onSectionDragStart(e) {
+  e.preventDefault();
+  e.stopPropagation();
+  const handle = e.currentTarget;
+  const sectionKey = handle.dataset.section;
+  const section = handle.closest('.payday-section');
+  const list = document.getElementById('creditor-list');
+  const allSections = [...list.querySelectorAll('.payday-section[data-section]')];
+  const fromIndex = allSections.indexOf(section);
+  const startY = e.type === 'touchstart' ? e.touches[0].clientY : e.clientY;
+  section.classList.add('section-dragging');
+  section.style.transition = 'none';
+  sectionDragState = { sectionKey, fromIndex, currentIndex: fromIndex, section, allSections, startY, sectionHeight: section.getBoundingClientRect().height + 8 };
+  document.addEventListener('touchmove', onSectionDragMove, { passive: false });
+  document.addEventListener('mousemove', onSectionDragMove);
+  document.addEventListener('touchend', onSectionDragEnd);
+  document.addEventListener('mouseup', onSectionDragEnd);
+}
+function onSectionDragMove(e) {
+  if (!sectionDragState) return;
+  e.preventDefault();
+  const clientY = e.type === 'touchmove' ? e.touches[0].clientY : e.clientY;
+  const deltaY = clientY - sectionDragState.startY;
+  sectionDragState.section.style.transform = `translateY(${deltaY}px) scale(1.02)`;
+  const moveBy = Math.round(deltaY / sectionDragState.sectionHeight);
+  let newIndex = sectionDragState.fromIndex + moveBy;
+  newIndex = Math.max(0, Math.min(newIndex, sectionDragState.allSections.length - 1));
+  sectionDragState.allSections.forEach(s => { s.classList.remove('section-drag-over-above', 'section-drag-over-below'); });
+  if (newIndex !== sectionDragState.fromIndex) {
+    if (newIndex < sectionDragState.fromIndex) {
+      sectionDragState.allSections[newIndex].classList.add('section-drag-over-above');
+    } else {
+      sectionDragState.allSections[newIndex].classList.add('section-drag-over-below');
+    }
+  }
+  sectionDragState.currentIndex = newIndex;
+}
+function onSectionDragEnd() {
+  if (!sectionDragState) return;
+  document.removeEventListener('touchmove', onSectionDragMove);
+  document.removeEventListener('mousemove', onSectionDragMove);
+  document.removeEventListener('touchend', onSectionDragEnd);
+  document.removeEventListener('mouseup', onSectionDragEnd);
+  const { fromIndex, currentIndex, section, allSections } = sectionDragState;
+  section.classList.remove('section-dragging');
+  section.style.transform = '';
+  section.style.transition = '';
+  allSections.forEach(s => { s.classList.remove('section-drag-over-above', 'section-drag-over-below'); });
+  if (fromIndex !== currentIndex) {
+    const [moved] = data.sectionOrder.splice(fromIndex, 1);
+    data.sectionOrder.splice(currentIndex, 0, moved);
+    saveData();
+    renderCreditors();
+  }
+  sectionDragState = null;
 }
 
 // ========== RENDER: LOANS ==========
