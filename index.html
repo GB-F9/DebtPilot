@@ -107,16 +107,36 @@ body {
 .creditor-meta { font-size: 13px; color: var(--text-secondary); margin-top: 2px; }
 .creditor-next-payment { font-size: 13px; color: var(--primary); margin-top: 4px; font-weight: 500; }
 .payday-section { margin-bottom: 8px; }
-.payday-header { display: flex; justify-content: space-between; align-items: center; padding: 12px 16px 4px; }
+.payday-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 12px 16px 4px;
+  cursor: pointer;
+  user-select: none;
+  -webkit-user-select: none;
+}
+.payday-header:active { opacity: 0.8; }
 .payday-label { font-size: 14px; font-weight: 700; color: var(--primary); text-transform: uppercase; letter-spacing: 0.5px; }
+.section-chevron {
+  font-size: 13px;
+  color: var(--text-secondary);
+  margin-left: 6px;
+  transition: transform 0.2s;
+  display: inline-block;
+}
+.payday-section.collapsed .section-chevron { transform: rotate(-90deg); }
+.section-body { overflow: hidden; }
+.payday-section.collapsed .section-body { display: none; }
 .section-drag-handle {
-  cursor: grab; color: var(--text-secondary); font-size: 18px; padding: 4px 8px;
+  cursor: grab; color: var(--text-secondary); font-size: 18px; padding: 4px 8px 4px 0;
   user-select: none; -webkit-user-select: none; touch-action: none;
 }
 .section-drag-handle:active { cursor: grabbing; }
 .payday-section.section-dragging { opacity: 0.7; box-shadow: 0 8px 24px rgba(0,0,0,0.15); position: relative; z-index: 10; transform: scale(1.02); }
 .payday-section.section-drag-over-above { border-top: 3px solid var(--primary); margin-top: -3px; }
 .payday-section.section-drag-over-below { border-bottom: 3px solid var(--primary); margin-bottom: -3px; }
+.payday-header-left { display: flex; align-items: center; }
 .payday-total { font-size: 14px; font-weight: 700; color: var(--text); }
 .creditor-arrow { color: var(--text-secondary); font-size: 18px; flex-shrink: 0; }
 .payday-check { width: 28px; height: 28px; border-radius: 50%; border: 2.5px solid #ccc; display: flex; align-items: center; justify-content: center; flex-shrink: 0; margin-right: 10px; cursor: pointer; transition: all 0.2s; background: white; font-size: 16px; font-weight: 700; color: transparent; }
@@ -649,6 +669,7 @@ function loadData() {
     if (raw) data = JSON.parse(raw);
   } catch(e) { console.error('Load error', e); }
   if (!data.creditors) data.creditors = [];
+  if (!data.collapsedSections) data.collapsedSections = {};
 }
 
 function saveData() {
@@ -673,13 +694,11 @@ function getLoan(creditorId, loanId) {
 }
 
 // ========== FORMATTING ==========
-// Get a key representing the current pay period (e.g., "2026-03-15" or "2026-03-30")
 function getCurrentPeriodKey() {
   const now = new Date();
   const y = now.getFullYear();
   const m = String(now.getMonth() + 1).padStart(2, '0');
   const day = now.getDate();
-  // If we're in the 1st-15th, current period is "15th"; if 16th-31st, it's "30th"
   const periodDay = day <= 15 ? '15' : '30';
   return `${y}-${m}-${periodDay}`;
 }
@@ -701,7 +720,6 @@ function togglePeriodPaid(creditorId, section) {
 }
 function isPeriodPaid(c, section) {
   if (!c.periodsPaid) {
-    // migrate old single periodPaid field
     if (c.periodPaid) {
       c.periodsPaid = {};
       const parts = c.periodPaid.split('-');
@@ -738,6 +756,16 @@ function ordinal(n) {
 
 function getInitials(name) {
   return name.split(/\s+/).map(w => w[0]).join('').toUpperCase().slice(0, 2);
+}
+
+// ========== SECTION COLLAPSE ==========
+function toggleSectionCollapse(sectionKey, event) {
+  // Don't collapse when clicking the drag handle
+  if (event.target.classList.contains('section-drag-handle')) return;
+  if (!data.collapsedSections) data.collapsedSections = {};
+  data.collapsedSections[sectionKey] = !data.collapsedSections[sectionKey];
+  saveData();
+  renderCreditors();
 }
 
 // ========== NAVIGATION ==========
@@ -777,7 +805,6 @@ function renderCreditors() {
   const list = document.getElementById('creditor-list');
   const summary = document.getElementById('creditors-summary');
 
-  // Show/hide reorder button
   document.getElementById('reorder-btn').style.display = data.creditors.length > 1 ? 'flex' : 'none';
   if (reorderMode) list.classList.add('reorder-mode'); else list.classList.remove('reorder-mode');
 
@@ -791,7 +818,6 @@ function renderCreditors() {
     return;
   }
 
-  // Summary
   let totalLoans = 0, totalRemaining = 0, totalPaid = 0, totalInstallments = 0;
   data.creditors.forEach(c => {
     c.loans.forEach(l => {
@@ -808,7 +834,6 @@ function renderCreditors() {
   document.getElementById('total-remaining').innerHTML = '&#8369;' + fmt(totalRemaining);
   document.getElementById('total-paid-pct').textContent = totalInstallments > 0 ? Math.round(totalPaid / totalInstallments * 100) + '%' : '0%';
 
-  // Helper to build a creditor card
   function buildCard(c, idx, section) {
     const loanCount = c.loans.length;
     let nextPaymentTotal = 0;
@@ -842,15 +867,12 @@ function renderCreditors() {
     </div>`;
   }
 
-  // Group creditors by payday (15th vs 30th) based on their due days
   function getPaydayGroup(c) {
-    // Collect all due days across all loans
     const dueDays = [];
     c.loans.forEach(l => {
       parseDueDays(l.dueDay).forEach(d => dueDays.push(d));
     });
-    if (dueDays.length === 0) return 'first'; // default
-    // Due 1-15 → funded from 30th salary; Due 16-31 → funded from 15th salary
+    if (dueDays.length === 0) return 'first';
     const hasFirstHalf = dueDays.some(d => d >= 1 && d <= 15);
     const hasSecondHalf = dueDays.some(d => d >= 16 && d <= 31);
     if (hasFirstHalf && hasSecondHalf) return 'both';
@@ -858,9 +880,9 @@ function renderCreditors() {
     return 'first';
   }
 
-  const payday15 = []; // due 16th-30th → funded from 15th salary
-  const payday30 = []; // due 1st-15th → funded from 30th salary
-  const allPaid = []; // fully paid creditors
+  const payday15 = [];
+  const payday30 = [];
+  const allPaid = [];
 
   data.creditors.forEach((c, idx) => {
     const hasUnpaid = c.loans.some(l => l.schedule.some(s => !s.paid));
@@ -874,11 +896,10 @@ function renderCreditors() {
     else if (group === 'both') { payday30.push({ c, idx }); payday15.push({ c, idx }); }
   });
 
-  // Build sections as keyed objects so we can reorder them
   const sections = {};
 
-  // 15th Payday section → covers dues on 16th-30th
   if (payday15.length > 0) {
+    const isCollapsed = !!(data.collapsedSections && data.collapsedSections['payday15']);
     let sectionTotal = 0;
     let paidCount = 0;
     payday15.forEach(({ c }) => {
@@ -895,19 +916,24 @@ function renderCreditors() {
     const statusStr = paidCount === payday15.length
       ? `<span style="color:var(--success);">All funded! &#10003;</span>`
       : `<span style="color:#e67e22;">${pendingCount} pending</span>`;
-    sections['payday15'] = `<div class="payday-section" data-section="payday15">
-      <div class="payday-header">
-        <span class="section-drag-handle" data-section="payday15">&#9776;</span>
-        <div class="payday-label">&#128181; 15th Payday</div>
+    sections['payday15'] = `<div class="payday-section${isCollapsed ? ' collapsed' : ''}" data-section="payday15">
+      <div class="payday-header" onclick="toggleSectionCollapse('payday15', event)">
+        <div class="payday-header-left">
+          <span class="section-drag-handle" data-section="payday15" onclick="event.stopPropagation()">&#9776;</span>
+          <div class="payday-label">&#128181; 15th Payday</div>
+          <span class="section-chevron">&#9660;</span>
+        </div>
         <div class="payday-total">&#8369;${fmt(sectionTotal)}</div>
       </div>
-      <div style="padding:0 16px 4px; font-size:12px; color:var(--text-secondary);">Due 16th&ndash;30th &middot; ${paidCount}/${payday15.length} funded &middot; ${statusStr}</div>
-      ${payday15.map(({ c, idx }) => buildCard(c, idx, '15')).join('')}
+      <div class="section-body">
+        <div style="padding:0 16px 4px; font-size:12px; color:var(--text-secondary);">Due 16th&ndash;30th &middot; ${paidCount}/${payday15.length} funded &middot; ${statusStr}</div>
+        ${payday15.map(({ c, idx }) => buildCard(c, idx, '15')).join('')}
+      </div>
     </div>`;
   }
 
-  // 30th Payday section → covers dues on 1st-15th
   if (payday30.length > 0) {
+    const isCollapsed = !!(data.collapsedSections && data.collapsedSections['payday30']);
     let sectionTotal = 0;
     let paidCount = 0;
     payday30.forEach(({ c }) => {
@@ -924,20 +950,23 @@ function renderCreditors() {
     const statusStr = paidCount === payday30.length
       ? `<span style="color:var(--success);">All funded! &#10003;</span>`
       : `<span style="color:#e67e22;">${pendingCount} pending</span>`;
-    sections['payday30'] = `<div class="payday-section" data-section="payday30">
-      <div class="payday-header">
-        <span class="section-drag-handle" data-section="payday30">&#9776;</span>
-        <div class="payday-label">&#128181; 30th Payday</div>
+    sections['payday30'] = `<div class="payday-section${isCollapsed ? ' collapsed' : ''}" data-section="payday30">
+      <div class="payday-header" onclick="toggleSectionCollapse('payday30', event)">
+        <div class="payday-header-left">
+          <span class="section-drag-handle" data-section="payday30" onclick="event.stopPropagation()">&#9776;</span>
+          <div class="payday-label">&#128181; 30th Payday</div>
+          <span class="section-chevron">&#9660;</span>
+        </div>
         <div class="payday-total">&#8369;${fmt(sectionTotal)}</div>
       </div>
-      <div style="padding:0 16px 4px; font-size:12px; color:var(--text-secondary);">Due 1st&ndash;15th &middot; ${paidCount}/${payday30.length} funded &middot; ${statusStr}</div>
-      ${payday30.map(({ c, idx }) => buildCard(c, idx, '30')).join('')}
+      <div class="section-body">
+        <div style="padding:0 16px 4px; font-size:12px; color:var(--text-secondary);">Due 1st&ndash;15th &middot; ${paidCount}/${payday30.length} funded &middot; ${statusStr}</div>
+        ${payday30.map(({ c, idx }) => buildCard(c, idx, '30')).join('')}
+      </div>
     </div>`;
   }
 
-  // Render sections in saved order
   if (!data.sectionOrder) data.sectionOrder = ['payday15', 'payday30'];
-  // Add any new sections not yet in order, remove stale ones
   const availableKeys = Object.keys(sections);
   const order = data.sectionOrder.filter(k => availableKeys.includes(k));
   availableKeys.forEach(k => { if (!order.includes(k)) order.push(k); });
@@ -946,17 +975,19 @@ function renderCreditors() {
   let html = '';
   order.forEach(key => { if (sections[key]) html += sections[key]; });
 
-  // All paid section (not draggable)
   if (allPaid.length > 0) {
     html += `<div class="payday-section">
       <div class="payday-header">
-        <div class="payday-label" style="color:var(--success);">&#10003; Fully Paid</div>
+        <div class="payday-header-left">
+          <div class="payday-label" style="color:var(--success);">&#10003; Fully Paid</div>
+        </div>
       </div>
-      ${allPaid.map(({ c, idx }) => buildCard(c, idx)).join('')}
+      <div class="section-body">
+        ${allPaid.map(({ c, idx }) => buildCard(c, idx)).join('')}
+      </div>
     </div>`;
   }
 
-  // Creditors with no loans yet
   const noLoans = data.creditors.filter(c => c.loans.length === 0);
   if (noLoans.length > 0) {
     html += noLoans.map((c) => {
@@ -1010,7 +1041,7 @@ function onDragStart(e) {
     cards,
     startY,
     offsetY: 0,
-    cardHeight: rect.height + 14 // card height + margin
+    cardHeight: rect.height + 14
   };
 
   document.addEventListener('touchmove', onDragMove, { passive: false });
@@ -1028,17 +1059,14 @@ function onDragMove(e) {
 
   dragState.card.style.transform = `translateY(${deltaY}px) scale(1.03)`;
 
-  // Determine which position we're hovering over
   const moveBy = Math.round(deltaY / dragState.cardHeight);
   let newIndex = dragState.fromIndex + moveBy;
   newIndex = Math.max(0, Math.min(newIndex, dragState.cards.length - 1));
 
-  // Clear all indicators
   dragState.cards.forEach(c => {
     c.classList.remove('drag-over-above', 'drag-over-below');
   });
 
-  // Show drop indicator
   if (newIndex !== dragState.fromIndex) {
     if (newIndex < dragState.fromIndex) {
       dragState.cards[newIndex].classList.add('drag-over-above');
@@ -1059,7 +1087,6 @@ function onDragEnd(e) {
 
   const { fromIndex, currentIndex } = dragState;
 
-  // Clean up styles
   dragState.card.classList.remove('dragging');
   dragState.card.style.transform = '';
   dragState.card.style.transition = '';
@@ -1067,7 +1094,6 @@ function onDragEnd(e) {
     c.classList.remove('drag-over-above', 'drag-over-below');
   });
 
-  // Apply reorder if position changed
   if (fromIndex !== currentIndex) {
     const [moved] = data.creditors.splice(fromIndex, 1);
     data.creditors.splice(currentIndex, 0, moved);
@@ -1192,7 +1218,6 @@ function renderSchedule() {
 
   document.getElementById('schedule-title').textContent = loan.label;
 
-  // Progress
   const paid = loan.schedule.filter(s => s.paid).length;
   const total = loan.schedule.length;
   const pct = total > 0 ? Math.round(paid / total * 100) : 0;
@@ -1200,7 +1225,6 @@ function renderSchedule() {
     <div class="progress-bar"><div class="progress-fill" style="width:${pct}%"></div></div>
     <div class="progress-label">Paid: <strong>${paid}/${total}</strong></div>`;
 
-  // Schedule list
   const today = new Date();
   today.setHours(0, 0, 0, 0);
   const list = document.getElementById('schedule-list');
@@ -1218,7 +1242,6 @@ function renderSchedule() {
     </div>`;
   }).join('');
 
-  // Details tab
   const creditor = getCreditor(currentCreditorId);
   const remaining = loan.schedule.filter(s => !s.paid).reduce((s, i) => s + i.amount, 0);
   document.getElementById('loan-details').innerHTML = `
@@ -1273,18 +1296,12 @@ function generateSchedule(loan) {
   const amort = parseFloat(loan.amortization) || 0;
 
   let count = 0;
-  let monthOffset = 1; // start from next month after availment
+  let monthOffset = 1;
 
   while (count < totalInstallments) {
-    let baseMonth = startDate.getMonth() + monthOffset;
-    let year = startDate.getFullYear() + Math.floor(baseMonth / 12);
-    let month = (baseMonth % 12) + 1;
-    // Fix: if baseMonth is exact multiple of 12, adjust
-    if (baseMonth % 12 === 0 && baseMonth > 0) { month = 1; }
-    // Simpler approach: use Date to get correct month/year
     const refDate = new Date(startDate.getFullYear(), startDate.getMonth() + monthOffset, 1);
-    year = refDate.getFullYear();
-    month = refDate.getMonth() + 1;
+    const year = refDate.getFullYear();
+    const month = refDate.getMonth() + 1;
     const maxDay = new Date(year, month, 0).getDate();
 
     for (let d = 0; d < dueDays.length && count < totalInstallments; d++) {
@@ -1396,7 +1413,6 @@ function saveLoan() {
   const duration = parseInt(document.getElementById('loan-duration').value) || 12;
   let endDate = document.getElementById('loan-end-date').value;
 
-  // Auto-calculate end date based on schedule
   if (!endDate && availmentDate && duration) {
     const dueDays = parseDueDays(dueDay);
     const monthsNeeded = Math.ceil(duration / dueDays.length);
@@ -1422,7 +1438,6 @@ function saveLoan() {
       loan.duration = duration;
       loan.endDate = endDate;
       if (scheduleChanged) {
-        // Preserve existing paid statuses by date
         const paidMap = {};
         loan.schedule.forEach(s => { if (s.paid) paidMap[s.date] = s.paidDate; });
         loan.schedule = generateSchedule(loan);
@@ -1488,7 +1503,7 @@ function openModal(id) {
     if (pressedOnOverlay && e.target === m) closeModal(id);
     pressedOnOverlay = false;
   };
-  m.onclick = null; // remove old handler
+  m.onclick = null;
 }
 
 function closeModal(id) {
